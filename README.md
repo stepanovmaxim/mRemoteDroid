@@ -15,6 +15,14 @@
 
 VNC/SSH сохраняются в модели (чтобы импорт из mRemoteNG не терял данные), но сеанс для них пока не открывается.
 
+## Скриншоты
+
+Проверено на эмуляторе Android 16 (API 36):
+
+| Пустой экран | Форма подключения | Дерево | Диалог запуска |
+|---|---|---|---|
+| ![empty](docs/01-empty.png) | ![edit](docs/03-edit-filled.png) | ![tree](docs/05-tree.png) | ![launch](docs/06-launch.png) |
+
 ## Стек
 
 - Kotlin + Jetpack Compose (Material 3)
