@@ -118,9 +118,19 @@ fun ConnectionTreeScreen(
     }
 
     fun doLaunch(node: NodeEntity, useUri: Boolean) {
+        val hasPassword = node.credentialBlob != null
         val res = if (useUri) RdpLauncher.launchViaUri(context, node, vm.passwordFor(node))
         else RdpLauncher.launchViaRdpFile(context, node, vm.passwordFor(node))
-        reportLaunch(context, res)
+        if (res == RdpLauncher.LaunchResult.Ok && !useUri && hasPassword) {
+            // The .rdp path can't carry the password to the MS client; it's on the clipboard.
+            Toast.makeText(
+                context,
+                "Пароль скопирован в буфер — вставьте в поле пароля (долгое нажатие → Вставить).",
+                Toast.LENGTH_LONG
+            ).show()
+        } else {
+            reportLaunch(context, res)
+        }
     }
 
     fun launchWithGate(node: NodeEntity, useUri: Boolean) {
@@ -503,7 +513,9 @@ private fun LaunchDialog(
                 }
                 if (node.credentialBlob != null) {
                     Text(
-                        "При открытии через .rdp пароль скопируется в буфер для вставки.",
+                        "• .rdp — любой клиент (в т.ч. Microsoft RD). Пароль MS-клиенту передать нельзя, " +
+                            "поэтому он копируется в буфер — вставьте в поле пароля.\n" +
+                            "• rdp:// — aFreeRDP: подключается сразу с паролем, без ввода.",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
