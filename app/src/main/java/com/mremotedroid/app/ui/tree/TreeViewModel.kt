@@ -84,6 +84,9 @@ class TreeViewModel(
                 append(" Пароли: ${result.passwordsDecrypted} ок")
                 if (result.passwordsFailed > 0) append(", ${result.passwordsFailed} не удалось")
                 append(".")
+                if (result.passwordsFailed > 0 && result.passwordsDecrypted == 0) {
+                    append(" Если в mRemoteNG задан пароль файла — повторите импорт, введя его вместо mR3m.")
+                }
             }
         }
     }

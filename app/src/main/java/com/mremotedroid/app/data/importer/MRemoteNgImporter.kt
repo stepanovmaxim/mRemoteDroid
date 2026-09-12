@@ -136,5 +136,5 @@ object MRemoteNgImporter {
 
     /** Returns the decrypted password, or null if decryption failed or input was empty. */
     private fun decryptPassword(encrypted: String?, password: String, iterations: Int): String? =
-        MRemoteNgCrypto.decrypt(encrypted, password, iterations)
+        MRemoteNgCrypto.decryptAny(encrypted, password, iterations)
 }
