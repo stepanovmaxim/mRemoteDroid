@@ -111,6 +111,16 @@ class ConnectionRepository(private val dao: NodeDao) {
     /** Adds nodes, keeping whatever is already stored (used by import-merge). */
     suspend fun addAll(nodes: List<NodeEntity>) = dao.upsertAll(nodes)
 
+    /** Builds a mRemoteNG confCons.xml from the whole tree, re-encrypting passwords. */
+    suspend fun buildExportXml(filePassword: String): String {
+        val nodes = dao.getAll()
+        return com.mremotedroid.app.data.importer.MRemoteNgExporter.export(
+            nodes = nodes,
+            plaintextPasswordOf = { CredentialCrypto.decrypt(it.credentialBlob) },
+            filePassword = filePassword.ifBlank { com.mremotedroid.app.data.importer.MRemoteNgCrypto.DEFAULT_FILE_PASSWORD }
+        )
+    }
+
     companion object {
         /** Flattens the node list into visible rows honoring collapsed folders. */
         fun flatten(nodes: List<NodeEntity>): List<TreeRow> {

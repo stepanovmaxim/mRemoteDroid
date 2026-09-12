@@ -1,6 +1,5 @@
 package com.mremotedroid.app.data.importer
 
-import android.util.Base64
 import android.util.Xml
 import com.mremotedroid.app.data.crypto.CredentialCrypto
 import com.mremotedroid.app.data.db.NodeEntity
@@ -8,11 +7,6 @@ import com.mremotedroid.app.data.model.Protocol
 import org.xmlpull.v1.XmlPullParser
 import java.io.InputStream
 import java.util.UUID
-import javax.crypto.Cipher
-import javax.crypto.SecretKeyFactory
-import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.PBEKeySpec
-import javax.crypto.spec.SecretKeySpec
 
 /**
  * Parses a mRemoteNG `confCons.xml` into [NodeEntity] rows.
@@ -25,11 +19,7 @@ import javax.crypto.spec.SecretKeySpec
  */
 object MRemoteNgImporter {
 
-    private const val DEFAULT_FILE_PASSWORD = "mR3m"
-    private const val SALT_LEN = 16
-    private const val NONCE_LEN = 16
-    private const val TAG_BITS = 128
-    private const val KEY_BITS = 256
+    private const val DEFAULT_FILE_PASSWORD = MRemoteNgCrypto.DEFAULT_FILE_PASSWORD
 
     data class Result(
         val nodes: List<NodeEntity>,
@@ -145,26 +135,6 @@ object MRemoteNgImporter {
     }
 
     /** Returns the decrypted password, or null if decryption failed or input was empty. */
-    private fun decryptPassword(encrypted: String?, password: String, iterations: Int): String? {
-        if (encrypted.isNullOrEmpty()) return null
-        return try {
-            val data = Base64.decode(encrypted, Base64.DEFAULT)
-            if (data.size <= SALT_LEN + NONCE_LEN) return null
-            val salt = data.copyOfRange(0, SALT_LEN)
-            val nonce = data.copyOfRange(SALT_LEN, SALT_LEN + NONCE_LEN)
-            val cipherText = data.copyOfRange(SALT_LEN + NONCE_LEN, data.size)
-
-            val keySpec = PBEKeySpec(password.toCharArray(), salt, iterations, KEY_BITS)
-            val key = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
-                .generateSecret(keySpec).encoded
-            val secret = SecretKeySpec(key, "AES")
-
-            val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
-                init(Cipher.DECRYPT_MODE, secret, GCMParameterSpec(TAG_BITS, nonce))
-            }
-            String(cipher.doFinal(cipherText), Charsets.UTF_8)
-        } catch (_: Exception) {
-            null
-        }
-    }
+    private fun decryptPassword(encrypted: String?, password: String, iterations: Int): String? =
+        MRemoteNgCrypto.decrypt(encrypted, password, iterations)
 }
