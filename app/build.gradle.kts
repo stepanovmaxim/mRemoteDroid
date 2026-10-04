@@ -60,6 +60,17 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+    // Split the APK per ABI so each download only carries one architecture's
+    // native FreeRDP libs (the universal APK bundles both and is ~2x larger).
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "x86_64")
+            isUniversalApk = true
+        }
+    }
+
     buildFeatures {
         compose = true
     }
