@@ -85,6 +85,7 @@ import com.freerdp.freerdpcore.domain.BookmarkBase;
 import com.freerdp.freerdpcore.domain.ConnectionReference;
 import com.freerdp.freerdpcore.domain.ManualBookmark;
 import com.freerdp.freerdpcore.services.LibFreeRDP;
+import com.freerdp.freerdpcore.services.SessionKeepAliveService;
 import com.freerdp.freerdpcore.utils.ClipboardManagerProxy;
 import com.freerdp.freerdpcore.utils.KeyboardMapper;
 import com.freerdp.freerdpcore.utils.Mouse;
@@ -140,6 +141,22 @@ public class SessionActivity extends AppCompatActivity
 	private boolean refitPending = false;
 	private boolean imeShown = false;
 	private boolean sessionConnected = false;
+	private String sessionTitle;
+
+	/** Android 13+: the keep-alive notification needs permission to be visible. */
+	private void requestNotificationPermissionOnce()
+	{
+		if (Build.VERSION.SDK_INT < 33)
+			return;
+		if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
+		    android.content.pm.PackageManager.PERMISSION_GRANTED)
+			return;
+		SharedPreferences prefs = getSharedPreferences("session_ui", MODE_PRIVATE);
+		if (prefs.getBoolean("notif_perm_asked", false))
+			return;
+		prefs.edit().putBoolean("notif_perm_asked", true).apply();
+		requestPermissions(new String[] { android.Manifest.permission.POST_NOTIFICATIONS }, 7);
+	}
 
 	/** Log of the last unexpectedly dropped session; the app offers to share it. */
 	public static final String SESSION_LOG_FILE = "last_session_log.txt";
@@ -454,6 +471,7 @@ public class SessionActivity extends AppCompatActivity
 		sessionView.postDelayed(() -> {
 			bindSession();
 			dlg.dismiss();
+			SessionKeepAliveService.start(this, "demo.local");
 			Log.i(TAG, "Demo session " + size[0] + "x" + size[1]);
 		}, 1500);
 	}
@@ -747,6 +765,9 @@ public class SessionActivity extends AppCompatActivity
 
 	@Override protected void onDestroy()
 	{
+		// the session ends with this activity; drop the keep-alive notification
+		if (isFinishing())
+			SessionKeepAliveService.stop(this);
 		if (connectThread != null)
 		{
 			connectThread.interrupt();
@@ -929,6 +950,7 @@ public class SessionActivity extends AppCompatActivity
 
 	private void connectWithTitle(String title)
 	{
+		sessionTitle = title;
 		session.setUIEventListener(this);
 
 		progressDialog = new ProgressDialog(this);
@@ -1930,6 +1952,10 @@ public class SessionActivity extends AppCompatActivity
 		{
 			Log.v(TAG, "OnConnectionSuccess");
 			sessionConnected = true;
+			// keep the connection alive when the screen goes off / app goes background
+			SessionKeepAliveService.start(SessionActivity.this,
+			                              sessionTitle != null ? sessionTitle : "");
+			requestNotificationPermissionOnce();
 
 			// bind session
 			bindSession();
@@ -1964,6 +1990,7 @@ public class SessionActivity extends AppCompatActivity
 		private void OnConnectionFailure(Context context)
 		{
 			Log.v(TAG, "OnConnectionFailure");
+			SessionKeepAliveService.stop(SessionActivity.this);
 
 			// remove pending move events
 			uiHandler.removeMessages(UIHandler.SEND_MOVE_EVENT);
@@ -1991,6 +2018,7 @@ public class SessionActivity extends AppCompatActivity
 		private void OnDisconnected(Context context)
 		{
 			Log.v(TAG, "OnDisconnected");
+			SessionKeepAliveService.stop(SessionActivity.this);
 
 			// remove pending move events
 			uiHandler.removeMessages(UIHandler.SEND_MOVE_EVENT);

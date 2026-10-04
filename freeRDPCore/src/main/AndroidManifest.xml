@@ -11,6 +11,11 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- keep a connected session alive with the screen off / app in background -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <supports-screens
         android:anyDensity="true"
@@ -97,6 +102,15 @@
             android:name=".presentation.HelpActivity"
             android:label="@string/title_help"
             android:theme="@style/Theme.Main" />
+
+        <service
+            android:name=".services.SessionKeepAliveService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps an active remote desktop (RDP) connection alive while the screen is off or the app is in the background" />
+        </service>
 
         <receiver
             android:exported="true"
