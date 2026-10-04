@@ -32,35 +32,51 @@ class MainActivity : FragmentActivity() {
         val repo = (application as MRemoteApp).repository
         val settings = AppSettings(this)
         setContent { MRemoteTheme { AppNav(repo, settings) } }
-        if (savedInstanceState == null) offerLastCrashReport()
+        // Not gated on savedInstanceState: after a crash Android restores the task
+        // with saved state. Each report file is deleted once offered, so no repeats.
+        if (!offerReport(
+                MRemoteApp.CRASH_FILE,
+                "Приложение аварийно закрылось",
+                "Отправьте отчёт об ошибке разработчику — по нему можно найти и исправить причину. Пароли в отчёт не попадают.",
+                "mRemoteDroid crash report"
+            )
+        ) {
+            offerReport(
+                "last_session_log.txt", // = SessionActivity.SESSION_LOG_FILE
+                "Сеанс был прерван",
+                "Соединение оборвалось. Отправьте журнал сеанса разработчику — в нём видна причина. Пароли в журнал не попадают.",
+                "mRemoteDroid session log"
+            )
+        }
     }
 
-    /** If the previous run crashed, let the user send the saved stack trace. */
-    private fun offerLastCrashReport() {
-        val file = File(filesDir, MRemoteApp.CRASH_FILE)
-        if (!file.exists()) return
+    /** Offers to share a saved report file (then deletes it). Returns true if shown. */
+    private fun offerReport(fileName: String, title: String, message: String, subject: String): Boolean {
+        val file = File(filesDir, fileName)
+        if (!file.exists()) return false
         val report = runCatching { file.readText() }.getOrNull()
         file.delete()
-        if (report.isNullOrBlank()) return
+        if (report.isNullOrBlank()) return false
 
         AlertDialog.Builder(this)
-            .setTitle("Приложение аварийно закрылось")
-            .setMessage("Отправьте отчёт об ошибке разработчику — по нему можно найти и исправить причину. Пароли в отчёт не попадают.")
+            .setTitle(title)
+            .setMessage(message)
             .setPositiveButton("Отправить отчёт") { _, _ ->
                 val send = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
-                    putExtra(Intent.EXTRA_SUBJECT, "mRemoteDroid crash report")
+                    putExtra(Intent.EXTRA_SUBJECT, subject)
                     putExtra(Intent.EXTRA_TEXT, report)
                 }
                 startActivity(Intent.createChooser(send, "Отправить отчёт"))
             }
             .setNeutralButton("Скопировать") { _, _ ->
                 val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                cm.setPrimaryClip(ClipData.newPlainText("mRemoteDroid crash", report))
+                cm.setPrimaryClip(ClipData.newPlainText(subject, report))
                 Toast.makeText(this, "Отчёт скопирован", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Закрыть", null)
             .show()
+        return true
     }
 }
 

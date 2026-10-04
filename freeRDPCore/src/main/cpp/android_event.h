@@ -53,6 +53,8 @@ typedef struct
 	int count;
 	HANDLE isSet;
 	ANDROID_EVENT** events;
+	/* events are pushed from the Java UI thread and consumed by the session thread */
+	CRITICAL_SECTION lock;
 } ANDROID_EVENT_QUEUE;
 
 FREERDP_LOCAL BOOL android_push_event(freerdp* inst, ANDROID_EVENT* event);

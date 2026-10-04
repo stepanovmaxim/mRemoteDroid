@@ -6,4 +6,5 @@
     <string name="menu_mouse_pointer_on">Show mouse pointer</string>
     <string name="menu_mouse_pointer_off">Hide mouse pointer</string>
     <string name="menu_fit_screen">Fit to screen</string>
+    <string name="session_connection_lost">Connection to the server was lost</string>
 </resources>

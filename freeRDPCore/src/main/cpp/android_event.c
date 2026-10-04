@@ -13,6 +13,7 @@
 #include <freerdp/config.h>
 
 #include <winpr/crt.h>
+#include <winpr/input.h>
 
 #include <freerdp/freerdp.h>
 #include <freerdp/log.h>
@@ -25,23 +26,32 @@
 BOOL android_push_event(freerdp* inst, ANDROID_EVENT* event)
 {
 	androidContext* aCtx = (androidContext*)inst->context;
+	ANDROID_EVENT_QUEUE* queue = aCtx->event_queue;
 
-	if (aCtx->event_queue->count >= aCtx->event_queue->size)
+	/* Called from the Java UI thread while the session thread pops events: guard
+	 * the array (it may be realloc'ed here) against concurrent access. */
+	EnterCriticalSection(&queue->lock);
+
+	if (queue->count >= queue->size)
 	{
 		int new_size;
 		void* new_events;
-		new_size = aCtx->event_queue->size * 2;
-		new_events = realloc((void*)aCtx->event_queue->events, sizeof(ANDROID_EVENT*) * new_size);
+		new_size = queue->size * 2;
+		new_events = realloc((void*)queue->events, sizeof(ANDROID_EVENT*) * new_size);
 
 		if (!new_events)
+		{
+			LeaveCriticalSection(&queue->lock);
 			return FALSE;
+		}
 
-		aCtx->event_queue->events = new_events;
-		aCtx->event_queue->size = new_size;
+		queue->events = new_events;
+		queue->size = new_size;
 	}
 
-	aCtx->event_queue->events[(aCtx->event_queue->count)++] = event;
-	return SetEvent(aCtx->event_queue->isSet);
+	queue->events[(queue->count)++] = event;
+	LeaveCriticalSection(&queue->lock);
+	return SetEvent(queue->isSet);
 }
 
 static ANDROID_EVENT* android_peek_event(ANDROID_EVENT_QUEUE* queue)
@@ -73,6 +83,84 @@ static ANDROID_EVENT* android_pop_event(ANDROID_EVENT_QUEUE* queue)
 	return event;
 }
 
+static BOOL android_send_vk(rdpInput* input, DWORD vk, BOOL down)
+{
+	const DWORD scancode = GetVirtualScanCodeFromVirtualKeyCode(vk, 4);
+	UINT16 flags = down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE;
+	flags |= (scancode & KBDEXT) ? KBD_FLAGS_EXTENDED : 0;
+	return freerdp_input_send_keyboard_event(input, flags, scancode & 0xFF);
+}
+
+/* Fallback when the server did not negotiate Unicode keyboard input: type the
+ * character with scancodes as on a US keyboard (letters, digits, space and
+ * punctuation). Characters without a key (e.g. Cyrillic) are dropped. */
+static BOOL android_send_char_as_scancodes(rdpInput* input, UINT16 flags, UINT16 ch)
+{
+	static const struct
+	{
+		char c;
+		DWORD vk;
+		BOOL shift;
+	} punct[] = {
+		{ '-', VK_OEM_MINUS, FALSE },  { '_', VK_OEM_MINUS, TRUE },  { '=', VK_OEM_PLUS, FALSE },
+		{ '+', VK_OEM_PLUS, TRUE },    { '[', VK_OEM_4, FALSE },     { '{', VK_OEM_4, TRUE },
+		{ ']', VK_OEM_6, FALSE },      { '}', VK_OEM_6, TRUE },      { '\\', VK_OEM_5, FALSE },
+		{ '|', VK_OEM_5, TRUE },       { ';', VK_OEM_1, FALSE },     { ':', VK_OEM_1, TRUE },
+		{ '\'', VK_OEM_7, FALSE },     { '"', VK_OEM_7, TRUE },      { ',', VK_OEM_COMMA, FALSE },
+		{ '<', VK_OEM_COMMA, TRUE },   { '.', VK_OEM_PERIOD, FALSE }, { '>', VK_OEM_PERIOD, TRUE },
+		{ '/', VK_OEM_2, FALSE },      { '?', VK_OEM_2, TRUE },      { '`', VK_OEM_3, FALSE },
+		{ '~', VK_OEM_3, TRUE },       { '!', '1', TRUE },           { '@', '2', TRUE },
+		{ '#', '3', TRUE },            { '$', '4', TRUE },           { '%', '5', TRUE },
+		{ '^', '6', TRUE },            { '&', '7', TRUE },           { '*', '8', TRUE },
+		{ '(', '9', TRUE },            { ')', '0', TRUE },
+	};
+	const BOOL down = (flags & KBD_FLAGS_RELEASE) == 0;
+	DWORD vk = 0;
+	BOOL shift = FALSE;
+
+	if (ch >= 'a' && ch <= 'z')
+		vk = 'A' + (ch - 'a');
+	else if (ch >= 'A' && ch <= 'Z')
+	{
+		vk = ch;
+		shift = TRUE;
+	}
+	else if (ch >= '0' && ch <= '9')
+		vk = ch;
+	else if (ch == ' ')
+		vk = VK_SPACE;
+	else
+	{
+		for (size_t i = 0; i < ARRAYSIZE(punct); i++)
+		{
+			if ((UINT16)punct[i].c == ch)
+			{
+				vk = punct[i].vk;
+				shift = punct[i].shift;
+				break;
+			}
+		}
+	}
+
+	if (!vk)
+	{
+		if (down)
+			WLog_WARN(TAG, "server has no Unicode input; cannot type U+%04X", ch);
+		return TRUE; /* drop the character, keep the session */
+	}
+
+	if (down)
+	{
+		if (shift && !android_send_vk(input, VK_LSHIFT, TRUE))
+			return FALSE;
+		return android_send_vk(input, vk, TRUE);
+	}
+
+	if (!android_send_vk(input, vk, FALSE))
+		return FALSE;
+	return shift ? android_send_vk(input, VK_LSHIFT, FALSE) : TRUE;
+}
+
 static BOOL android_process_event(ANDROID_EVENT_QUEUE* queue, freerdp* inst)
 {
 	rdpContext* context;
@@ -83,13 +171,20 @@ static BOOL android_process_event(ANDROID_EVENT_QUEUE* queue, freerdp* inst)
 	context = inst->context;
 	WINPR_ASSERT(context);
 
-	while (android_peek_event(queue))
+	for (;;)
 	{
 		BOOL rc = FALSE;
 		androidContext* afc = (androidContext*)context;
-		ANDROID_EVENT* event = android_pop_event(queue);
+		ANDROID_EVENT* event = NULL;
 
-		WINPR_ASSERT(event);
+		EnterCriticalSection(&queue->lock);
+		event = android_pop_event(queue);
+		LeaveCriticalSection(&queue->lock);
+
+		if (!event)
+			break;
+
+		const int type = event->type;
 
 		switch (event->type)
 		{
@@ -106,8 +201,12 @@ static BOOL android_process_event(ANDROID_EVENT_QUEUE* queue, freerdp* inst)
 			{
 				ANDROID_EVENT_KEY* key_event = (ANDROID_EVENT_KEY*)event;
 
-				rc = freerdp_input_send_unicode_keyboard_event(context->input, key_event->flags,
-				                                               key_event->scancode);
+				if (freerdp_settings_get_bool(context->settings, FreeRDP_UnicodeInput))
+					rc = freerdp_input_send_unicode_keyboard_event(
+					    context->input, key_event->flags, key_event->scancode);
+				else
+					rc = android_send_char_as_scancodes(context->input, key_event->flags,
+					                                    key_event->scancode);
 			}
 			break;
 
@@ -142,8 +241,17 @@ static BOOL android_process_event(ANDROID_EVENT_QUEUE* queue, freerdp* inst)
 
 		android_event_free(event);
 
-		if (!rc)
+		/* A disconnect request intentionally ends the session loop. */
+		if (type == EVENT_TYPE_DISCONNECT)
 			return FALSE;
+
+		/* Upstream also ended the whole session when a single input event could not
+		 * be sent (e.g. Unicode input the server didn't negotiate), so pressing a
+		 * key dropped the connection with "Could not establish a connection".
+		 * Drop just that event instead; a really broken connection is detected by
+		 * freerdp_check_event_handles(). */
+		if (!rc)
+			WLog_WARN(TAG, "input event (type %d) could not be sent; dropped", type);
 	}
 
 	return TRUE;
@@ -312,6 +420,7 @@ BOOL android_event_queue_init(freerdp* inst)
 
 	queue->size = 16;
 	queue->count = 0;
+	InitializeCriticalSection(&queue->lock);
 	queue->isSet = CreateEventA(NULL, TRUE, FALSE, NULL);
 
 	if (!queue->isSet)
@@ -361,6 +470,7 @@ void android_event_queue_uninit(freerdp* inst)
 			queue->count = 0;
 		}
 
+		DeleteCriticalSection(&queue->lock);
 		free(queue);
 	}
 }
