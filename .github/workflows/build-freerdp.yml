@@ -1,0 +1,84 @@
+name: Build FreeRDP Android libs
+
+# Cross-compiles the native FreeRDP/WinPR/OpenSSL libraries for Android on a
+# real Linux runner (the official FreeRDP android build scripts assume POSIX,
+# which is why we don't build them on the Windows dev machine). The resulting
+# jniLibs tree (core .so files + OpenSSL + headers) is uploaded as an artifact
+# to be vendored into the app's freeRDPCore module.
+
+on:
+  workflow_dispatch:
+    inputs:
+      freerdp_tag:
+        description: "FreeRDP git tag"
+        default: "3.11.0"
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      NDK_VERSION: "27.2.12479018"
+      CMAKE_VERSION: "3.22.1"
+    steps:
+      - name: Install host build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build git perl \
+            python3 python-is-python3 pkg-config nasm
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK and CMake
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "ndk;${NDK_VERSION}" "cmake;${CMAKE_VERSION}"
+
+      - name: Clone FreeRDP
+        run: git clone --depth 1 --branch "${{ github.event.inputs.freerdp_tag }}" https://github.com/FreeRDP/FreeRDP.git
+
+      - name: Configure build options (RDP core only, no media codecs)
+        working-directory: FreeRDP
+        run: |
+          sed -i 's/^WITH_OPENH264=.*/WITH_OPENH264=0/' scripts/android-build.conf
+          sed -i 's/^WITH_FFMPEG=.*/WITH_FFMPEG=0/' scripts/android-build.conf
+          sed -i 's/^WITH_MEDIACODEC=.*/WITH_MEDIACODEC=0/' scripts/android-build.conf
+          sed -i 's/^WITH_OPENSSL=.*/WITH_OPENSSL=1/' scripts/android-build.conf
+          sed -i 's/^BUILD_DEPS=.*/BUILD_DEPS=1/' scripts/android-build.conf
+          sed -i 's|^BUILD_ARCH=.*|BUILD_ARCH="arm64-v8a x86_64"|' scripts/android-build.conf
+          echo "----- effective config -----"
+          grep -E '^(WITH_|BUILD_|NDK_TARGET)' scripts/android-build.conf
+
+      - name: Build FreeRDP native libraries
+        working-directory: FreeRDP
+        env:
+          ANDROID_NDK: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
+          ANDROID_SDK: ${{ env.ANDROID_HOME }}
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
+        run: |
+          export CMAKE_PROGRAM="$ANDROID_SDK/cmake/${CMAKE_VERSION}/bin/cmake"
+          export PATH="$ANDROID_SDK/cmake/${CMAKE_VERSION}/bin:$PATH"
+          echo "NDK=$ANDROID_NDK"
+          test -d "$ANDROID_NDK" || { echo "NDK missing"; exit 1; }
+          bash scripts/android-build-freerdp.sh --build-deps
+
+      - name: Show produced libraries
+        working-directory: FreeRDP
+        run: |
+          find client/Android/Studio/freeRDPCore/src/main/jniLibs -name '*.so' -printf '%p  %s bytes\n' | sort
+
+      - name: Upload jniLibs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: freerdp-jnilibs
+          path: FreeRDP/client/Android/Studio/freeRDPCore/src/main/jniLibs/**
+          if-no-files-found: error
+          retention-days: 14
