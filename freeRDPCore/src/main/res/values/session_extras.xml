@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- mRemoteDroid additions for the floating session menu -->
+<resources>
+    <item name="session_fit_screen" type="id" />
+    <string name="session_menu">Session menu</string>
+    <string name="menu_mouse_pointer_on">Show mouse pointer</string>
+    <string name="menu_mouse_pointer_off">Hide mouse pointer</string>
+    <string name="menu_fit_screen">Fit to screen</string>
+</resources>

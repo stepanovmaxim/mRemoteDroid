@@ -54,6 +54,7 @@ public class SessionView extends View
 	private SessionViewListener sessionViewListener = null;
 	// helpers for scaling gesture handling
 	private float scaleFactor = 1.0f;
+	private float minScaleFactor = MIN_SCALE_FACTOR;
 	private Matrix scaleMatrix;
 	private Matrix invScaleMatrix;
 	private RectF invalidRegionF;
@@ -91,9 +92,8 @@ public class SessionView extends View
 		scaleMatrix = new Matrix();
 		invScaleMatrix = new Matrix();
 		invalidRegionF = new RectF();
-
-		setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-		                      View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+		// System bars are managed by SessionActivity (WindowInsetsController); the
+		// legacy per-view setSystemUiVisibility flags would fight with it.
 	}
 
 	/* External Mouse Hover */
@@ -175,9 +175,24 @@ public class SessionView extends View
 		return (scaleFactor > (MAX_SCALE_FACTOR - SCALE_FACTOR_DELTA));
 	}
 
+	/**
+	 * Lowest zoom the user can reach. Defaults to 1:1, but is lowered to the
+	 * "fit to screen" factor when the remote desktop is larger than the view
+	 * (e.g. a landscape session shown on a portrait screen).
+	 */
+	public float getMinZoom()
+	{
+		return minScaleFactor;
+	}
+
+	public void setMinZoom(float factor)
+	{
+		minScaleFactor = Math.min(MIN_SCALE_FACTOR, Math.max(0.05f, factor));
+	}
+
 	public boolean isAtMinZoom()
 	{
-		return (scaleFactor < (MIN_SCALE_FACTOR + SCALE_FACTOR_DELTA));
+		return (scaleFactor < (minScaleFactor + SCALE_FACTOR_DELTA));
 	}
 
 	public boolean zoomIn(float factor)
@@ -197,9 +212,9 @@ public class SessionView extends View
 	{
 		boolean res = true;
 		scaleFactor -= factor;
-		if (scaleFactor < (MIN_SCALE_FACTOR + SCALE_FACTOR_DELTA))
+		if (scaleFactor < (minScaleFactor + SCALE_FACTOR_DELTA))
 		{
-			scaleFactor = MIN_SCALE_FACTOR;
+			scaleFactor = minScaleFactor;
 			res = false;
 		}
 		setZoom(scaleFactor);

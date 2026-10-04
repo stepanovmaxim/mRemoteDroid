@@ -36,6 +36,25 @@ import android.os.Message;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.activity.OnBackPressedCallback;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+import androidx.core.widget.ImageViewCompat;
+
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+import android.widget.TextView;
 
 import android.text.InputType;
 import android.util.Log;
@@ -113,6 +132,9 @@ public class SessionActivity extends AppCompatActivity
 
 	private boolean connectCancelledByUser = false;
 	private boolean sessionRunning = false;
+	private boolean refitPending = false;
+	private View sessionMenuButton;
+	private static final float FAB_IDLE_ALPHA = 0.55f;
 	private boolean toggleMouseButtons = false;
 
 	private LibFreeRDPBroadcastReceiver libFreeRDPBroadcastReceiver;
@@ -214,20 +236,41 @@ public class SessionActivity extends AppCompatActivity
 	{
 		super.onCreate(savedInstanceState);
 
-		// show status bar or make fullscreen?
-		if (ApplicationSettingsActivity.getHideStatusBar(this))
+		// Always run the session edge-to-edge and fullscreen (immersive). The old
+		// action bar is gone: on Android 15+ edge-to-edge is enforced and it ended
+		// up drawn under the status bar. Session commands live in a floating button.
+		WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
 		{
-			getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-			                     WindowManager.LayoutParams.FLAG_FULLSCREEN);
+			WindowManager.LayoutParams lp = getWindow().getAttributes();
+			lp.layoutInDisplayCutoutMode =
+			    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+			getWindow().setAttributes(lp);
 		}
 
 		this.setContentView(R.layout.session);
-		if (hasHardwareMenuButton() || ApplicationSettingsActivity.getHideActionBar(this))
-		{
-			this.getSupportActionBar().hide();
-		}
-		else
-			this.getSupportActionBar().show();
+		if (getSupportActionBar() != null)
+			getSupportActionBar().hide();
+
+		// Keep the desktop out of the camera cutout and above the on-screen keyboard.
+		ViewCompat.setOnApplyWindowInsetsListener(
+		    findViewById(R.id.session_root_view), (v, insets) -> {
+			    Insets cut = insets.getInsets(WindowInsetsCompat.Type.displayCutout());
+			    Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+			    v.setPadding(cut.left, cut.top, cut.right, Math.max(cut.bottom, ime.bottom));
+			    return WindowInsetsCompat.CONSUMED;
+		    });
+
+		getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+			@Override public void handleOnBackPressed()
+			{
+				// Back never drops the session: it closes keyboards, otherwise opens the menu.
+				if (sysKeyboardVisible || extKeyboardVisible)
+					showKeyboard(false, false);
+				else
+					showSessionMenu(sessionMenuButton);
+			}
+		});
 
 		Log.v(TAG, "Session.onCreate");
 
@@ -251,6 +294,12 @@ public class SessionActivity extends AppCompatActivity
 				    {
 					    processIntent(getIntent());
 					    sessionRunning = true;
+				    }
+				    else if (refitPending)
+				    {
+					    // first layout after a rotation: fit the desktop to the new shape
+					    refitPending = false;
+					    fitSessionToScreen();
 				    }
 			    }
 		    });
@@ -319,14 +368,203 @@ public class SessionActivity extends AppCompatActivity
 		mClipboardManager.addClipboardChangedListener(this);
 
 		mDecor = getWindow().getDecorView();
-		mDecor.setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-		                             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+		applyImmersive();
+
+		setupSessionMenuButton();
+	}
+
+	/** Hide status and navigation bars; a swipe from the edge shows them briefly. */
+	private void applyImmersive()
+	{
+		WindowInsetsControllerCompat controller =
+		    WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+		controller.hide(WindowInsetsCompat.Type.systemBars());
+		controller.setSystemBarsBehavior(
+		    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+	}
+
+	private int dp(float value)
+	{
+		return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value,
+		                                            getResources().getDisplayMetrics()));
+	}
+
+	/**
+	 * Scale the remote desktop so it fits the visible area entirely (letterboxed),
+	 * e.g. a landscape session on a portrait screen. Pinch-zoom still enlarges it.
+	 */
+	private void fitSessionToScreen()
+	{
+		if (bitmap == null || scrollView == null || sessionView == null)
+			return;
+		int vw = scrollView.getWidth();
+		int vh = scrollView.getHeight();
+		if (vw <= 0 || vh <= 0 || bitmap.getWidth() <= 0 || bitmap.getHeight() <= 0)
+			return;
+		float fit = Math.min((float)vw / bitmap.getWidth(), (float)vh / bitmap.getHeight());
+		sessionView.setMinZoom(fit);
+		sessionView.setZoom(Math.min(fit, 1.0f));
+		scrollView.scrollTo(0, 0);
+	}
+
+	/**
+	 * Remote desktop resolution for URI launches: always landscape-shaped (long
+	 * side x short side of the visible area), so it fills the screen 1:1 in
+	 * landscape and is fit-to-screen in portrait.
+	 */
+	private int[] landscapeSessionSize()
+	{
+		View root = findViewById(R.id.session_root_view);
+		int w = root.getWidth() - root.getPaddingLeft() - root.getPaddingRight();
+		int h = root.getHeight() - root.getPaddingTop() - root.getPaddingBottom();
+		int lw = Math.max(w, h);
+		int lh = Math.min(w, h);
+		lw = Math.max(640, lw) & ~3; // RDP prefers a width divisible by 4
+		lh = Math.max(480, lh) & ~1;
+		return new int[] { lw, lh };
+	}
+
+	// ****************************************************************************
+	// Floating session menu (replaces the action bar overflow menu)
+
+	private void setupSessionMenuButton()
+	{
+		sessionMenuButton = findViewById(R.id.session_menu_fab);
+		final int touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
+		sessionMenuButton.setOnClickListener(this::showSessionMenu);
+		// draggable, so it never permanently covers part of the remote desktop
+		sessionMenuButton.setOnTouchListener(new View.OnTouchListener() {
+			private float offsetX, offsetY, downX, downY;
+			private boolean dragging;
+
+			@Override public boolean onTouch(View v, MotionEvent e)
+			{
+				View parent = (View)v.getParent();
+				switch (e.getActionMasked())
+				{
+					case MotionEvent.ACTION_DOWN:
+						downX = e.getRawX();
+						downY = e.getRawY();
+						offsetX = v.getX() - downX;
+						offsetY = v.getY() - downY;
+						dragging = false;
+						v.setAlpha(0.9f);
+						return true;
+					case MotionEvent.ACTION_MOVE:
+						if (!dragging && Math.hypot(e.getRawX() - downX, e.getRawY() - downY) >
+						                     touchSlop)
+							dragging = true;
+						if (dragging)
+						{
+							float x = Math.max(0, Math.min(e.getRawX() + offsetX,
+							                               parent.getWidth() - v.getWidth()));
+							float y = Math.max(0, Math.min(e.getRawY() + offsetY,
+							                               parent.getHeight() - v.getHeight()));
+							v.setX(x);
+							v.setY(y);
+						}
+						return true;
+					case MotionEvent.ACTION_UP:
+						v.setAlpha(FAB_IDLE_ALPHA);
+						if (!dragging)
+							v.performClick();
+						return true;
+					case MotionEvent.ACTION_CANCEL:
+						v.setAlpha(FAB_IDLE_ALPHA);
+						return true;
+				}
+				return false;
+			}
+		});
+	}
+
+	private void showSessionMenu(View anchor)
+	{
+		if (anchor == null)
+			return;
+		final LinearLayout list = new LinearLayout(this);
+		list.setOrientation(LinearLayout.VERTICAL);
+		GradientDrawable bg = new GradientDrawable();
+		bg.setColor(0xE6202124);
+		bg.setCornerRadius(dp(14));
+		list.setBackground(bg);
+		list.setPadding(dp(6), dp(6), dp(6), dp(6));
+
+		final PopupWindow popup = new PopupWindow(list, ViewGroup.LayoutParams.WRAP_CONTENT,
+		                                          ViewGroup.LayoutParams.WRAP_CONTENT, true);
+		popup.setOutsideTouchable(true);
+		popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+		popup.setElevation(dp(8));
+
+		boolean pointerOn = touchPointerView.getVisibility() == View.VISIBLE;
+		addSessionMenuRow(list, popup, R.drawable.icon_menu_touch_pointer,
+		                  getString(pointerOn ? R.string.menu_mouse_pointer_off
+		                                      : R.string.menu_mouse_pointer_on),
+		                  R.id.session_touch_pointer);
+		addSessionMenuRow(list, popup, R.drawable.icon_menu_sys_keyboard,
+		                  getString(R.string.menu_sys_keyboard), R.id.session_sys_keyboard);
+		addSessionMenuRow(list, popup, R.drawable.icon_menu_ext_keyboard,
+		                  getString(R.string.menu_ext_keyboard), R.id.session_ext_keyboard);
+		addSessionMenuRow(list, popup, R.drawable.ic_session_fit,
+		                  getString(R.string.menu_fit_screen), R.id.session_fit_screen);
+		addSessionMenuRow(list, popup, R.drawable.icon_menu_disconnect,
+		                  getString(R.string.menu_disconnect), R.id.session_disconnect);
+
+		// place it beside the button, flipping to whichever side has room
+		list.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+		View root = findViewById(R.id.session_root_view);
+		int[] loc = new int[2];
+		anchor.getLocationInWindow(loc);
+		int pw = list.getMeasuredWidth();
+		int ph = list.getMeasuredHeight();
+		int x = loc[0] - pw - dp(8);
+		if (x < dp(8))
+			x = loc[0] + anchor.getWidth() + dp(8);
+		int y = loc[1] + anchor.getHeight() / 2 - ph / 2;
+		y = Math.max(dp(8), Math.min(y, root.getHeight() - ph - dp(8)));
+		popup.showAtLocation(root, Gravity.NO_GRAVITY, x, y);
+	}
+
+	private void addSessionMenuRow(LinearLayout list, PopupWindow popup, int iconRes,
+	                               String label, int itemId)
+	{
+		LinearLayout row = new LinearLayout(this);
+		row.setOrientation(LinearLayout.HORIZONTAL);
+		row.setGravity(Gravity.CENTER_VERTICAL);
+		row.setPadding(dp(12), dp(10), dp(20), dp(10));
+		TypedValue ripple = new TypedValue();
+		getTheme().resolveAttribute(android.R.attr.selectableItemBackground, ripple, true);
+		row.setBackgroundResource(ripple.resourceId);
+
+		ImageView icon = new ImageView(this);
+		icon.setImageResource(iconRes);
+		ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(Color.WHITE));
+		row.addView(icon, new LinearLayout.LayoutParams(dp(24), dp(24)));
+
+		TextView text = new TextView(this);
+		text.setText(label);
+		text.setTextColor(Color.WHITE);
+		text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+		LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
+		    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+		tlp.setMarginStart(dp(14));
+		row.addView(text, tlp);
+
+		row.setOnClickListener(v -> {
+			popup.dismiss();
+			handleSessionMenuItem(itemId);
+		});
+		list.addView(row, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+		                                                ViewGroup.LayoutParams.WRAP_CONTENT));
 	}
 
 	@Override public void onWindowFocusChanged(boolean hasFocus)
 	{
 		super.onWindowFocusChanged(hasFocus);
 		mClipboardManager.getPrimaryClipManually();
+		// dialogs/keyboard can bring the system bars back; hide them again
+		if (hasFocus)
+			applyImmersive();
 	}
 
 	@Override protected void onStart()
@@ -405,8 +643,16 @@ public class SessionActivity extends AppCompatActivity
 		keyboardView.setKeyboard(specialkeysKeyboard);
 		modifiersKeyboardView.setKeyboard(modifiersKeyboard);
 
-		mDecor.setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-		                             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+		applyImmersive();
+
+		// re-fit the desktop once the rotated layout is measured, and put the
+		// (possibly dragged) menu button back in its default spot
+		refitPending = true;
+		if (sessionMenuButton != null)
+		{
+			sessionMenuButton.setTranslationX(0);
+			sessionMenuButton.setTranslationY(0);
+		}
 	}
 
 	private void processIntent(Intent intent)
@@ -494,6 +740,15 @@ public class SessionActivity extends AppCompatActivity
 
 	private void connect(Uri openUri)
 	{
+		// No explicit size: use a landscape desktop matching the screen, instead of
+		// FreeRDP's default (or the portrait shape the launcher happened to be in).
+		if (openUri.getQueryParameter("size") == null && openUri.getQueryParameter("w") == null)
+		{
+			int[] size = landscapeSessionSize();
+			openUri =
+			    openUri.buildUpon().appendQueryParameter("size", size[0] + "x" + size[1]).build();
+			Log.i(TAG, "Session resolution " + size[0] + "x" + size[1]);
+		}
 		session = GlobalApp.createSession(openUri, getApplicationContext());
 
 		connectWithTitle(openUri.getAuthority());
@@ -549,8 +804,8 @@ public class SessionActivity extends AppCompatActivity
 		sessionView.onSurfaceChange(session);
 		scrollView.requestLayout();
 		keyboardMapper.reset(this);
-		mDecor.setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-		                             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+		applyImmersive();
+		scrollView.post(this::fitSessionToScreen);
 	}
 
 	private void setSoftInputState(boolean state)
@@ -685,11 +940,18 @@ public class SessionActivity extends AppCompatActivity
 
 	@Override public boolean onOptionsItemSelected(MenuItem item)
 	{
+		return handleSessionMenuItem(item.getItemId());
+	}
+
+	private boolean handleSessionMenuItem(int itemId)
+	{
 		// refer to http://tools.android.com/tips/non-constant-fields why we
 		// can't use switch/case here ..
-		int itemId = item.getItemId();
-
-		if (itemId == R.id.session_touch_pointer)
+		if (itemId == R.id.session_fit_screen)
+		{
+			fitSessionToScreen();
+		}
+		else if (itemId == R.id.session_touch_pointer)
 		{
 			// toggle touch pointer
 			if (touchPointerView.getVisibility() == View.VISIBLE)
@@ -1274,6 +1536,7 @@ public class SessionActivity extends AppCompatActivity
 				{
 					sessionView.onSurfaceChange(session);
 					scrollView.requestLayout();
+					scrollView.post(SessionActivity.this::fitSessionToScreen);
 					break;
 				}
 				case REFRESH_SESSIONVIEW:
@@ -1357,6 +1620,8 @@ public class SessionActivity extends AppCompatActivity
 		@Override public boolean onScaleBegin(ScaleGestureDetector detector)
 		{
 			scrollView.setScrollEnabled(false);
+			// start from the current zoom (it may have been set by fit-to-screen)
+			scaleFactor = sessionView.getZoom();
 			return true;
 		}
 
@@ -1365,7 +1630,7 @@ public class SessionActivity extends AppCompatActivity
 
 			// calc scale factor
 			scaleFactor *= detector.getScaleFactor();
-			scaleFactor = Math.max(SessionView.MIN_SCALE_FACTOR,
+			scaleFactor = Math.max(sessionView.getMinZoom(),
 			                       Math.min(scaleFactor, SessionView.MAX_SCALE_FACTOR));
 			sessionView.setZoom(scaleFactor);
 

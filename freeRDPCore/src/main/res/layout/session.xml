@@ -64,4 +64,20 @@
         android:layout_centerHorizontal="true"
         android:visibility="gone" />
 
+    <!-- Floating, draggable, translucent session menu button (topmost) -->
+    <ImageButton
+        android:id="@+id/session_menu_fab"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
+        android:layout_marginEnd="8dp"
+        android:alpha="0.55"
+        android:background="@drawable/session_fab_bg"
+        android:contentDescription="@string/session_menu"
+        android:elevation="6dp"
+        android:padding="12dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/ic_session_menu" />
+
 </RelativeLayout>

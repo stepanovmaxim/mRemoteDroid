@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Russian strings for the session screen (the rest falls back to English) -->
+<resources>
+    <string name="session_menu">Меню сеанса</string>
+    <string name="menu_mouse_pointer_on">Показать курсор мыши</string>
+    <string name="menu_mouse_pointer_off">Скрыть курсор мыши</string>
+    <string name="menu_fit_screen">Вписать в экран</string>
+    <string name="menu_sys_keyboard">Клавиатура</string>
+    <string name="menu_ext_keyboard">Функциональные клавиши</string>
+    <string name="menu_touch_pointer">Курсор мыши</string>
+    <string name="menu_disconnect">Отключиться</string>
+</resources>

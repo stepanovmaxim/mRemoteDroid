@@ -24,10 +24,8 @@ object EmbeddedRdpLauncher {
 
     fun launch(context: Context, node: NodeEntity, plainPassword: String?): Result {
         return try {
-            val metrics = context.resources.displayMetrics
-            val width = metrics.widthPixels.coerceAtLeast(640)
-            val height = metrics.heightPixels.coerceAtLeast(480)
-
+            // No explicit size: SessionActivity picks a landscape resolution matching
+            // the screen and fits it to the current orientation.
             val port = if (node.port in 1..65535) node.port else 3389
             val authority = buildString {
                 if (node.username.isNotBlank()) append(enc(node.username)).append("@")
@@ -41,8 +39,6 @@ object EmbeddedRdpLauncher {
                 .path("connect")
                 .appendQueryParameter("cert", "ignore")
                 .appendQueryParameter("clipboard", "")           // -> /clipboard
-                .appendQueryParameter("dynamic-resolution", "")  // -> /dynamic-resolution
-                .appendQueryParameter("size", "${width}x${height}")
 
             if (node.domain.isNotBlank()) builder.appendQueryParameter("d", node.domain)
             if (!plainPassword.isNullOrEmpty()) builder.appendQueryParameter("p", plainPassword)

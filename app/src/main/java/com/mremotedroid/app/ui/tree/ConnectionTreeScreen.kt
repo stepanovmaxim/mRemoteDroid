@@ -64,6 +64,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mremotedroid.app.data.db.NodeEntity
 import com.mremotedroid.app.data.model.Protocol
 import androidx.compose.material3.Button
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.mremotedroid.app.launch.EmbeddedRdpLauncher
 import com.mremotedroid.app.launch.RdpLauncher
 import com.mremotedroid.app.security.BiometricGate
@@ -515,33 +517,33 @@ private fun LaunchDialog(
         onDismissRequest = onDismiss,
         title = { Text(node.name) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Scrollable so nothing gets clipped in landscape, where the dialog is short.
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text("${node.hostname}:${node.port}", style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    "• Встроенный RDP — сеанс прямо в приложении, с паролем, без внешнего клиента.\n" +
-                        "• .rdp — любой клиент (в т.ч. Microsoft RD); пароль копируется в буфер для вставки.\n" +
-                        "• rdp:// — aFreeRDP: подключается сразу с паролем.",
+                    "Встроенный RDP — сеанс прямо в приложении, с сохранённым паролем.",
                     style = MaterialTheme.typography.bodySmall
                 )
-                if (installed.isNotEmpty()) {
-                    Text(
-                        "Внешние клиенты: " + installed.joinToString { it.second },
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Button(onClick = onEmbedded, modifier = Modifier.fillMaxWidth()) {
-                        Text("Встроенный RDP")
-                    }
-                    Row {
-                        TextButton(onClick = onFile) { Text("Открыть (.rdp)") }
-                        Spacer(Modifier.width(8.dp))
-                        TextButton(onClick = onUri) { Text("rdp://") }
-                    }
+                Text(
+                    "Во внешнем клиенте: .rdp — любой клиент (пароль копируется в буфер), " +
+                        "rdp:// — aFreeRDP (сразу с паролем)." +
+                        if (installed.isNotEmpty()) " Установлены: " + installed.joinToString { it.second } else "",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row {
+                    TextButton(onClick = onFile) { Text("Открыть (.rdp)") }
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(onClick = onUri) { Text("rdp://") }
                 }
             }
         },
-        confirmButton = {},
+        // The primary action sits in the dialog's button row, which is always visible.
+        confirmButton = {
+            Button(onClick = onEmbedded) { Text("Встроенный RDP") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } }
     )
 }
