@@ -64,6 +64,9 @@ jobs:
         working-directory: FreeRDP
         run: |
           export ANDROID_NDK="$ANDROID_HOME/ndk/${NDK_VERSION}"
+          # OpenSSL 3.4's android config locates its toolchain via ANDROID_NDK_ROOT/HOME.
+          export ANDROID_NDK_ROOT="$ANDROID_NDK"
+          export ANDROID_NDK_HOME="$ANDROID_NDK"
           export ANDROID_SDK="$ANDROID_HOME"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export CMAKE_PROGRAM="$ANDROID_HOME/cmake/${CMAKE_VERSION}/bin/cmake"
