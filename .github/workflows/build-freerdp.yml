@@ -34,13 +34,16 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install NDK and CMake
+      - name: Install NDK and CMake (preinstalled SDK)
         run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          if ! command -v sdkmanager >/dev/null 2>&1; then
+            export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          fi
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
           sdkmanager "ndk;${NDK_VERSION}" "cmake;${CMAKE_VERSION}"
+          echo "--- installed ---"
+          ls "$ANDROID_HOME/ndk" && ls "$ANDROID_HOME/cmake"
 
       - name: Clone FreeRDP
         run: git clone --depth 1 --branch "${{ github.event.inputs.freerdp_tag }}" https://github.com/FreeRDP/FreeRDP.git
@@ -59,21 +62,21 @@ jobs:
 
       - name: Build FreeRDP native libraries
         working-directory: FreeRDP
-        env:
-          ANDROID_NDK: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
-          ANDROID_SDK: ${{ env.ANDROID_HOME }}
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
         run: |
-          export CMAKE_PROGRAM="$ANDROID_SDK/cmake/${CMAKE_VERSION}/bin/cmake"
-          export PATH="$ANDROID_SDK/cmake/${CMAKE_VERSION}/bin:$PATH"
+          export ANDROID_NDK="$ANDROID_HOME/ndk/${NDK_VERSION}"
+          export ANDROID_SDK="$ANDROID_HOME"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export CMAKE_PROGRAM="$ANDROID_HOME/cmake/${CMAKE_VERSION}/bin/cmake"
+          export PATH="$ANDROID_HOME/cmake/${CMAKE_VERSION}/bin:$PATH"
           echo "NDK=$ANDROID_NDK"
           test -d "$ANDROID_NDK" || { echo "NDK missing"; exit 1; }
           bash scripts/android-build-freerdp.sh --build-deps
 
       - name: Show produced libraries
         working-directory: FreeRDP
+        if: always()
         run: |
-          find client/Android/Studio/freeRDPCore/src/main/jniLibs -name '*.so' -printf '%p  %s bytes\n' | sort
+          find client/Android/Studio/freeRDPCore/src/main/jniLibs -name '*.so' -printf '%p  %s bytes\n' 2>/dev/null | sort || echo "no libs"
 
       - name: Upload jniLibs artifact
         uses: actions/upload-artifact@v4
