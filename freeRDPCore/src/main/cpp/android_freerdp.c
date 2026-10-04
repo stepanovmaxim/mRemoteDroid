@@ -193,6 +193,13 @@ static BOOL android_pre_connect(freerdp* instance)
 	if (!settings)
 		return FALSE;
 
+	/* Announce Unicode keyboard input so typed text is sent as characters,
+	 * independent of the remote keyboard layout (Cyrillic etc.). FreeRDP only
+	 * enables this by default in server mode; the client must opt in, and the
+	 * server's support is then negotiated via the input capability set. */
+	if (!freerdp_settings_set_bool(settings, FreeRDP_UnicodeInput, TRUE))
+		return FALSE;
+
 	rc = PubSub_SubscribeChannelConnected(instance->context->pubSub,
 	                                      android_OnChannelConnectedEventHandler);
 
