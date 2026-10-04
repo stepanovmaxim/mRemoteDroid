@@ -15,6 +15,7 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
@@ -25,6 +26,7 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 
@@ -55,6 +57,15 @@ public class SessionView extends View
 	// helpers for scaling gesture handling
 	private float scaleFactor = 1.0f;
 	private float minScaleFactor = MIN_SCALE_FACTOR;
+	private int offsetX = 0;
+	private int offsetY = 0;
+	// double-click helper: Windows only accepts two clicks as a double click when
+	// they land within a few pixels, which two finger taps rarely do.
+	private static final long DOUBLE_CLICK_MS = 500;
+	private int doubleTapSlopSquare;
+	private int lastTapX, lastTapY;
+	private float lastTapViewX, lastTapViewY;
+	private long lastTapTime = 0;
 	private Matrix scaleMatrix;
 	private Matrix invScaleMatrix;
 	private RectF invalidRegionF;
@@ -92,6 +103,8 @@ public class SessionView extends View
 		scaleMatrix = new Matrix();
 		invScaleMatrix = new Matrix();
 		invalidRegionF = new RectF();
+		int slop = ViewConfiguration.get(context).getScaledDoubleTapSlop();
+		doubleTapSlopSquare = slop * slop;
 		// System bars are managed by SessionActivity (WindowInsetsController); the
 		// legacy per-view setSystemUiVisibility flags would fight with it.
 	}
@@ -129,6 +142,7 @@ public class SessionView extends View
 		invalidRegionF.set(invalidRegion);
 		scaleMatrix.mapRect(invalidRegionF);
 		invalidRegionF.roundOut(invalidRegion);
+		invalidRegion.offset(offsetX, offsetY);
 
 		invalidRegions.add(invalidRegion);
 	}
@@ -238,20 +252,44 @@ public class SessionView extends View
 		return touchPointerPaddingHeight;
 	}
 
+	/** Horizontal offset of the desktop inside this view (centering when it is smaller). */
+	public int getOffsetX()
+	{
+		return offsetX;
+	}
+
+	public int getOffsetY()
+	{
+		return offsetY;
+	}
+
+	// When the scaled desktop is smaller than the viewport (fit-to-screen), center it
+	// instead of pinning it to the top-left corner.
+	private void updateCenteringOffsets(int contentWidth, int contentHeight)
+	{
+		View parent = (View)getParent();
+		int pw = parent != null ? parent.getWidth() : 0;
+		int ph = parent != null ? parent.getHeight() : 0;
+		offsetX = Math.max(0, (pw - contentWidth) / 2);
+		offsetY = Math.max(0, (ph - contentHeight) / 2);
+	}
+
 	@Override public void onMeasure(int widthMeasureSpec, int heightMeasureSpec)
 	{
-		Log.v(TAG, width + "x" + height);
-		this.setMeasuredDimension((int)(width * scaleFactor) + touchPointerPaddingWidth,
-		                          (int)(height * scaleFactor) + touchPointerPaddingHeight);
+		int contentWidth = (int)(width * scaleFactor) + touchPointerPaddingWidth;
+		int contentHeight = (int)(height * scaleFactor) + touchPointerPaddingHeight;
+		updateCenteringOffsets(contentWidth, contentHeight);
+		this.setMeasuredDimension(contentWidth + 2 * offsetX, contentHeight + 2 * offsetY);
 	}
 
 	@Override public void onDraw(@NonNull Canvas canvas)
 	{
 		super.onDraw(canvas);
 
-		canvas.save();
-		canvas.concat(scaleMatrix);
 		canvas.drawColor(Color.BLACK);
+		canvas.save();
+		canvas.translate(offsetX, offsetY);
+		canvas.concat(scaleMatrix);
 		if (surface != null)
 		{
 			surface.draw(canvas);
@@ -273,7 +311,7 @@ public class SessionView extends View
 	private MotionEvent mapTouchEvent(MotionEvent event)
 	{
 		MotionEvent mappedEvent = MotionEvent.obtain(event);
-		float[] coordinates = { mappedEvent.getX(), mappedEvent.getY() };
+		float[] coordinates = { mappedEvent.getX() - offsetX, mappedEvent.getY() - offsetY };
 		invScaleMatrix.mapPoints(coordinates);
 		mappedEvent.setLocation(coordinates[0], coordinates[1]);
 		return mappedEvent;
@@ -283,8 +321,8 @@ public class SessionView extends View
 	private MotionEvent mapDoubleTouchEvent(MotionEvent event)
 	{
 		MotionEvent mappedEvent = MotionEvent.obtain(event);
-		float[] coordinates = { (mappedEvent.getX(0) + mappedEvent.getX(1)) / 2,
-			                    (mappedEvent.getY(0) + mappedEvent.getY(1)) / 2 };
+		float[] coordinates = { (mappedEvent.getX(0) + mappedEvent.getX(1)) / 2 - offsetX,
+			                    (mappedEvent.getY(0) + mappedEvent.getY(1)) / 2 - offsetY };
 		invScaleMatrix.mapPoints(coordinates);
 		mappedEvent.setLocation(coordinates[0], coordinates[1]);
 		return mappedEvent;
@@ -309,6 +347,31 @@ public class SessionView extends View
 		void onSessionViewMove(int x, int y);
 
 		void onSessionViewScroll(boolean down);
+	}
+
+	/**
+	 * Remote coordinates for a tap click. A tap that follows the previous one quickly
+	 * and nearby reuses its exact remote position, so the two clicks form a Windows
+	 * double click even though the finger moved a few pixels.
+	 */
+	private Point clickPoint(MotionEvent viewEvent, MotionEvent mappedEvent)
+	{
+		int x = (int)mappedEvent.getX();
+		int y = (int)mappedEvent.getY();
+		long now = viewEvent.getEventTime();
+		float dx = viewEvent.getX() - lastTapViewX;
+		float dy = viewEvent.getY() - lastTapViewY;
+		if (now - lastTapTime < DOUBLE_CLICK_MS && dx * dx + dy * dy < doubleTapSlopSquare)
+		{
+			x = lastTapX;
+			y = lastTapY;
+		}
+		lastTapX = x;
+		lastTapY = y;
+		lastTapViewX = viewEvent.getX();
+		lastTapViewY = viewEvent.getY();
+		lastTapTime = now;
+		return new Point(x, y);
 	}
 
 	private class SessionGestureListener extends GestureDetector.SimpleOnGestureListener
@@ -359,12 +422,10 @@ public class SessionView extends View
 
 		public boolean onDoubleTap(MotionEvent e)
 		{
-			// send 2nd click for double click
-			MotionEvent mappedEvent = mapTouchEvent(e);
-			sessionViewListener.onSessionViewLeftTouch((int)mappedEvent.getX(),
-			                                           (int)mappedEvent.getY(), true);
-			sessionViewListener.onSessionViewLeftTouch((int)mappedEvent.getX(),
-			                                           (int)mappedEvent.getY(), false);
+			// send 2nd click for double click, at the first click's position
+			Point p = clickPoint(e, mapTouchEvent(e));
+			sessionViewListener.onSessionViewLeftTouch(p.x, p.y, true);
+			sessionViewListener.onSessionViewLeftTouch(p.x, p.y, false);
 			return true;
 		}
 
@@ -375,12 +436,17 @@ public class SessionView extends View
 			sessionViewListener.onSessionViewBeginTouch();
 			switch (e.getButtonState())
 			{
+				// A finger tap has no buttons (state 0). Upstream only handled
+				// BUTTON_PRIMARY (mouse/stylus), so taps never clicked and a double
+				// tap produced a single click from onDoubleTap.
+				case 0:
 				case MotionEvent.BUTTON_PRIMARY:
-					sessionViewListener.onSessionViewLeftTouch((int)mappedEvent.getX(),
-					                                           (int)mappedEvent.getY(), true);
-					sessionViewListener.onSessionViewLeftTouch((int)mappedEvent.getX(),
-					                                           (int)mappedEvent.getY(), false);
+				{
+					Point p = clickPoint(e, mappedEvent);
+					sessionViewListener.onSessionViewLeftTouch(p.x, p.y, true);
+					sessionViewListener.onSessionViewLeftTouch(p.x, p.y, false);
 					break;
+				}
 				case MotionEvent.BUTTON_SECONDARY:
 					sessionViewListener.onSessionViewRightTouch((int)mappedEvent.getX(),
 					                                            (int)mappedEvent.getY(), true);

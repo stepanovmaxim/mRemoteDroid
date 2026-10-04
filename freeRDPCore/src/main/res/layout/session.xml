@@ -11,7 +11,8 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/session_root_view"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#FF000000">
 
     <!-- children are specified bottom-up so that we have a correct z-order in our final layout -->
     <android.inputmethodservice.KeyboardView
@@ -24,7 +25,7 @@
     <com.freerdp.freerdpcore.presentation.ScrollView2D
         android:id="@+id/sessionScrollView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_above="@id/extended_keyboard"
         android:layout_alignParentTop="true"
         android:drawingCacheQuality="low"

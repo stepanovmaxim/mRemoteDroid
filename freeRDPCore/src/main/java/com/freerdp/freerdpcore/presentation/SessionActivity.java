@@ -133,6 +133,10 @@ public class SessionActivity extends AppCompatActivity
 	private boolean connectCancelledByUser = false;
 	private boolean sessionRunning = false;
 	private boolean refitPending = false;
+	// fit-to-screen state: autoFit is cleared once the user zooms by hand
+	private boolean autoFit = true;
+	private int lastFitWidth = -1;
+	private int lastFitHeight = -1;
 	private View sessionMenuButton;
 	private static final float FAB_IDLE_ALPHA = 0.55f;
 	private boolean toggleMouseButtons = false;
@@ -295,11 +299,19 @@ public class SessionActivity extends AppCompatActivity
 					    processIntent(getIntent());
 					    sessionRunning = true;
 				    }
-				    else if (refitPending)
+				    else if (sessionRunning && bitmap != null)
 				    {
-					    // first layout after a rotation: fit the desktop to the new shape
-					    refitPending = false;
-					    fitSessionToScreen();
+					    // Re-fit whenever the viewport changes shape (rotation, coming back
+					    // from the background), unless the user zoomed by hand or a
+					    // keyboard is what shrank it.
+					    boolean sizeChanged = scrollView.getWidth() != lastFitWidth ||
+					                          scrollView.getHeight() != lastFitHeight;
+					    boolean keyboardUp = sysKeyboardVisible || extKeyboardVisible;
+					    if (refitPending || (autoFit && sizeChanged && !keyboardUp))
+					    {
+						    refitPending = false;
+						    fitSessionToScreen();
+					    }
 				    }
 			    }
 		    });
@@ -342,6 +354,7 @@ public class SessionActivity extends AppCompatActivity
 			@Override public void onClick(View v)
 			{
 				resetZoomControlsAutoHideTimeout();
+				autoFit = false;
 				zoomControls.setIsZoomInEnabled(sessionView.zoomIn(ZOOMING_STEP));
 				zoomControls.setIsZoomOutEnabled(true);
 			}
@@ -350,6 +363,7 @@ public class SessionActivity extends AppCompatActivity
 			@Override public void onClick(View v)
 			{
 				resetZoomControlsAutoHideTimeout();
+				autoFit = false;
 				zoomControls.setIsZoomOutEnabled(sessionView.zoomOut(ZOOMING_STEP));
 				zoomControls.setIsZoomInEnabled(true);
 			}
@@ -405,6 +419,9 @@ public class SessionActivity extends AppCompatActivity
 		sessionView.setMinZoom(fit);
 		sessionView.setZoom(Math.min(fit, 1.0f));
 		scrollView.scrollTo(0, 0);
+		autoFit = true;
+		lastFitWidth = vw;
+		lastFitHeight = vh;
 	}
 
 	/**
@@ -665,6 +682,11 @@ public class SessionActivity extends AppCompatActivity
 			// Launched from URI, e.g:
 			// freerdp://user@ip:port/connect?sound=&rfx=&p=password&clipboard=%2b&themes=-
 			connect(openUri);
+		}
+		else if (bundle == null)
+		{
+			// started without any connection info (no URI, no extras): nothing to show
+			closeSessionActivity(RESULT_CANCELED);
 		}
 		else if (bundle.containsKey(PARAM_INSTANCE))
 		{
@@ -1421,8 +1443,13 @@ public class SessionActivity extends AppCompatActivity
 
 	private Point mapScreenCoordToSessionCoord(int x, int y)
 	{
-		int mappedX = (int)((float)(x + scrollView.getScrollX()) / sessionView.getZoom());
-		int mappedY = (int)((float)(y + scrollView.getScrollY()) / sessionView.getZoom());
+		// account for the centering offset used when the desktop is smaller than the screen
+		int mappedX = (int)((float)(x + scrollView.getScrollX() - sessionView.getOffsetX()) /
+		                    sessionView.getZoom());
+		int mappedY = (int)((float)(y + scrollView.getScrollY() - sessionView.getOffsetY()) /
+		                    sessionView.getZoom());
+		mappedX = Math.max(0, mappedX);
+		mappedY = Math.max(0, mappedY);
 		if (bitmap != null)
 		{
 			if (mappedX > bitmap.getWidth())
@@ -1659,6 +1686,8 @@ public class SessionActivity extends AppCompatActivity
 		@Override public void onScaleEnd(ScaleGestureDetector de)
 		{
 			scrollView.setScrollEnabled(true);
+			// manual zoom wins: stop auto-fitting until "Fit to screen" or a rotation
+			autoFit = false;
 		}
 	}
 
