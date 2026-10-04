@@ -27,6 +27,7 @@ import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.inputmethod.BaseInputConnection;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 
@@ -347,6 +348,12 @@ public class SessionView extends View
 		void onSessionViewMove(int x, int y);
 
 		void onSessionViewScroll(boolean down);
+
+		/** Text typed on the soft keyboard (committed or composing delta). */
+		void onSessionViewText(CharSequence text);
+
+		/** Key event coming from the soft keyboard's input connection (Backspace, Enter, ...). */
+		void onSessionViewKeyEvent(KeyEvent event);
 	}
 
 	/**
@@ -517,10 +524,116 @@ public class SessionView extends View
 		}
 	}
 
+	// The session view acts as a text editor for the soft keyboard; otherwise modern
+	// IMEs refuse to show for it or only half-work.
+	@Override public boolean onCheckIsTextEditor()
+	{
+		return true;
+	}
+
 	@Override public InputConnection onCreateInputConnection(EditorInfo outAttrs)
 	{
 		super.onCreateInputConnection(outAttrs);
-		outAttrs.inputType = InputType.TYPE_CLASS_TEXT;
-		return null;
+		// Plain multi-line text, no suggestions/auto-caps; keep the language switch (so
+		// Cyrillic works) and never go into the landscape fullscreen "extract" editor
+		// that would hide the remote desktop.
+		outAttrs.inputType = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS |
+		                     InputType.TYPE_TEXT_FLAG_MULTI_LINE;
+		outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI |
+		                      EditorInfo.IME_FLAG_NO_FULLSCREEN | EditorInfo.IME_ACTION_NONE;
+		return new RemoteInputConnection();
+	}
+
+	/**
+	 * Forwards soft keyboard input to the remote session. Nothing is kept locally
+	 * except the IME's current composing word, so its later corrections can be
+	 * replayed remotely as backspaces plus the changed tail.
+	 */
+	private class RemoteInputConnection extends BaseInputConnection
+	{
+		private String composing = "";
+
+		RemoteInputConnection()
+		{
+			super(SessionView.this, false);
+		}
+
+		private void sendKey(int keyCode)
+		{
+			if (sessionViewListener == null)
+				return;
+			sessionViewListener.onSessionViewKeyEvent(
+			    new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
+			sessionViewListener.onSessionViewKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
+		}
+
+		// Replace the remote copy of the composing text with newText, sending only the diff.
+		private void replaceComposing(CharSequence newText)
+		{
+			String next = newText == null ? "" : newText.toString();
+			int common = 0;
+			while (common < composing.length() && common < next.length() &&
+			       composing.charAt(common) == next.charAt(common))
+				common++;
+			for (int i = common; i < composing.length(); i++)
+				sendKey(KeyEvent.KEYCODE_DEL);
+			if (common < next.length() && sessionViewListener != null)
+				sessionViewListener.onSessionViewText(next.substring(common));
+			composing = next;
+		}
+
+		@Override public boolean commitText(CharSequence text, int newCursorPosition)
+		{
+			replaceComposing(text);
+			composing = "";
+			return true;
+		}
+
+		@Override public boolean setComposingText(CharSequence text, int newCursorPosition)
+		{
+			replaceComposing(text);
+			return true;
+		}
+
+		@Override public boolean finishComposingText()
+		{
+			composing = "";
+			return true;
+		}
+
+		@Override public boolean deleteSurroundingText(int beforeLength, int afterLength)
+		{
+			for (int i = 0; i < beforeLength; i++)
+				sendKey(KeyEvent.KEYCODE_DEL);
+			for (int i = 0; i < afterLength; i++)
+				sendKey(KeyEvent.KEYCODE_FORWARD_DEL);
+			if (beforeLength > 0 && !composing.isEmpty())
+				composing = composing.substring(0, Math.max(0, composing.length() - beforeLength));
+			return true;
+		}
+
+		@Override public boolean sendKeyEvent(KeyEvent event)
+		{
+			if (sessionViewListener != null)
+				sessionViewListener.onSessionViewKeyEvent(event);
+			return true;
+		}
+
+		@Override public boolean performEditorAction(int actionCode)
+		{
+			sendKey(KeyEvent.KEYCODE_ENTER);
+			return true;
+		}
+
+		// The remote side owns the text; don't let the IME read a stale local buffer.
+		@Override public CharSequence getTextBeforeCursor(int length, int flags)
+		{
+			return "";
+		}
+
+		@Override public CharSequence getTextAfterCursor(int length, int flags)
+		{
+			return "";
+		}
 	}
 }

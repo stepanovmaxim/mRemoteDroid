@@ -467,6 +467,10 @@ public class KeyboardMapper
 			case KeyEvent.ACTION_MULTIPLE:
 			{
 				String str = event.getCharacters();
+				// ACTION_MULTIPLE is also used for plain key repeats, where there are no
+				// characters (getCharacters() == null) - that used to crash with an NPE.
+				if (str == null)
+					return false;
 				for (int i = 0; i < str.length(); i++)
 					listener.processUnicodeKey(str.charAt(i));
 				return true;
@@ -519,7 +523,7 @@ public class KeyboardMapper
 		listener.processVirtualKey(VK_LMENU, false);
 	}
 
-	private boolean isModifierPressed()
+	public boolean isModifierPressed()
 	{
 		return (shiftPressed || ctrlPressed || altPressed || winPressed);
 	}

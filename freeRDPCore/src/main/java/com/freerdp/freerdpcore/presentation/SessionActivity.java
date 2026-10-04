@@ -58,6 +58,8 @@ import android.widget.TextView;
 
 import android.text.InputType;
 import android.util.Log;
+import android.view.HapticFeedbackConstants;
+import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -133,6 +135,7 @@ public class SessionActivity extends AppCompatActivity
 	private boolean connectCancelledByUser = false;
 	private boolean sessionRunning = false;
 	private boolean refitPending = false;
+	private boolean imeShown = false;
 	// fit-to-screen state: autoFit is cleared once the user zooms by hand
 	private boolean autoFit = true;
 	private int lastFitWidth = -1;
@@ -262,6 +265,17 @@ public class SessionActivity extends AppCompatActivity
 			    Insets cut = insets.getInsets(WindowInsetsCompat.Type.displayCutout());
 			    Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
 			    v.setPadding(cut.left, cut.top, cut.right, Math.max(cut.bottom, ime.bottom));
+
+			    // keep our state in sync when the user closes the keyboard with its own
+			    // button / gesture instead of our menu
+			    boolean imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
+			    if (imeShown && !imeVisible && sysKeyboardVisible)
+			    {
+				    sysKeyboardVisible = false;
+				    if (modifiersKeyboardView != null && !extKeyboardVisible)
+					    modifiersKeyboardView.setVisibility(View.GONE);
+			    }
+			    imeShown = imeVisible;
 			    return WindowInsetsCompat.CONSUMED;
 		    });
 
@@ -452,6 +466,7 @@ public class SessionActivity extends AppCompatActivity
 		// draggable, so it never permanently covers part of the remote desktop
 		sessionMenuButton.setOnTouchListener(new View.OnTouchListener() {
 			private float offsetX, offsetY, downX, downY;
+			private long downTime;
 			private boolean dragging;
 
 			@Override public boolean onTouch(View v, MotionEvent e)
@@ -464,6 +479,7 @@ public class SessionActivity extends AppCompatActivity
 						downY = e.getRawY();
 						offsetX = v.getX() - downX;
 						offsetY = v.getY() - downY;
+						downTime = e.getEventTime();
 						dragging = false;
 						v.setAlpha(0.9f);
 						return true;
@@ -484,7 +500,17 @@ public class SessionActivity extends AppCompatActivity
 					case MotionEvent.ACTION_UP:
 						v.setAlpha(FAB_IDLE_ALPHA);
 						if (!dragging)
-							v.performClick();
+						{
+							// long press = quick keyboard toggle, tap = menu
+							if (e.getEventTime() - downTime >=
+							    ViewConfiguration.getLongPressTimeout())
+							{
+								v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+								handleSessionMenuItem(R.id.session_sys_keyboard);
+							}
+							else
+								v.performClick();
+						}
 						return true;
 					case MotionEvent.ACTION_CANCEL:
 						v.setAlpha(FAB_IDLE_ALPHA);
@@ -569,7 +595,8 @@ public class SessionActivity extends AppCompatActivity
 
 		row.setOnClickListener(v -> {
 			popup.dismiss();
-			handleSessionMenuItem(itemId);
+			// run after the popup has released window focus (the keyboard needs it)
+			sessionView.post(() -> handleSessionMenuItem(itemId));
 		});
 		list.addView(row, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
 		                                                ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -832,15 +859,19 @@ public class SessionActivity extends AppCompatActivity
 
 	private void setSoftInputState(boolean state)
 	{
-		InputMethodManager mgr = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-
+		// SHOW_FORCED on a non-editor view is ignored by current Android/IMEs, and it
+		// silently failed while the menu popup still held window focus. The insets
+		// controller waits for focus; SessionView now reports itself as a text editor.
+		WindowInsetsControllerCompat controller =
+		    WindowCompat.getInsetsController(getWindow(), sessionView);
 		if (state)
 		{
-			mgr.showSoftInput(sessionView, InputMethodManager.SHOW_FORCED);
+			sessionView.requestFocus();
+			controller.show(WindowInsetsCompat.Type.ime());
 		}
 		else
 		{
-			mgr.hideSoftInputFromWindow(sessionView.getWindowToken(), 0);
+			controller.hide(WindowInsetsCompat.Type.ime());
 		}
 	}
 
@@ -1088,11 +1119,15 @@ public class SessionActivity extends AppCompatActivity
 	// KeyboardMapper.KeyProcessingListener implementation
 	@Override public void processVirtualKey(int virtualKeyCode, boolean down)
 	{
+		if (session == null)
+			return;
 		LibFreeRDP.sendKeyEvent(session.getInstance(), virtualKeyCode, down);
 	}
 
 	@Override public void processUnicodeKey(int unicodeKey)
 	{
+		if (session == null)
+			return;
 		LibFreeRDP.sendUnicodeKeyEvent(session.getInstance(), unicodeKey, true);
 		LibFreeRDP.sendUnicodeKeyEvent(session.getInstance(), unicodeKey, false);
 	}
@@ -1431,6 +1466,43 @@ public class SessionActivity extends AppCompatActivity
 	@Override public void onSessionViewScroll(boolean down)
 	{
 		LibFreeRDP.sendCursorEvent(session.getInstance(), 0, 0, Mouse.getScrollEvent(this, down));
+	}
+
+	@Override public void onSessionViewText(CharSequence text)
+	{
+		if (session == null || text == null)
+			return;
+		KeyCharacterMap charMap = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD);
+		for (int i = 0; i < text.length(); i++)
+		{
+			char c = text.charAt(i);
+			if (c == '\n' || c == '\r')
+			{
+				keyboardMapper.processAndroidKeyEvent(
+				    new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
+				continue;
+			}
+			// With Ctrl/Alt/Win latched on the function-key bar, send real key events so
+			// shortcuts like Ctrl+C reach the server as such.
+			if (keyboardMapper.isModifierPressed() && c < 128)
+			{
+				KeyEvent[] events = charMap.getEvents(new char[] { c });
+				if (events != null)
+				{
+					for (KeyEvent e : events)
+						keyboardMapper.processAndroidKeyEvent(e);
+					continue;
+				}
+			}
+			// Otherwise send the character itself (works for any layout, e.g. Cyrillic).
+			processUnicodeKey(c);
+		}
+	}
+
+	@Override public void onSessionViewKeyEvent(KeyEvent event)
+	{
+		if (session != null && event != null)
+			keyboardMapper.processAndroidKeyEvent(event);
 	}
 
 	// ****************************************************************************

@@ -1,6 +1,12 @@
 package com.mremotedroid.app
 
+import android.app.AlertDialog
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
+import java.io.File
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.FragmentActivity
@@ -26,6 +32,35 @@ class MainActivity : FragmentActivity() {
         val repo = (application as MRemoteApp).repository
         val settings = AppSettings(this)
         setContent { MRemoteTheme { AppNav(repo, settings) } }
+        if (savedInstanceState == null) offerLastCrashReport()
+    }
+
+    /** If the previous run crashed, let the user send the saved stack trace. */
+    private fun offerLastCrashReport() {
+        val file = File(filesDir, MRemoteApp.CRASH_FILE)
+        if (!file.exists()) return
+        val report = runCatching { file.readText() }.getOrNull()
+        file.delete()
+        if (report.isNullOrBlank()) return
+
+        AlertDialog.Builder(this)
+            .setTitle("Приложение аварийно закрылось")
+            .setMessage("Отправьте отчёт об ошибке разработчику — по нему можно найти и исправить причину. Пароли в отчёт не попадают.")
+            .setPositiveButton("Отправить отчёт") { _, _ ->
+                val send = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, "mRemoteDroid crash report")
+                    putExtra(Intent.EXTRA_TEXT, report)
+                }
+                startActivity(Intent.createChooser(send, "Отправить отчёт"))
+            }
+            .setNeutralButton("Скопировать") { _, _ ->
+                val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                cm.setPrimaryClip(ClipData.newPlainText("mRemoteDroid crash", report))
+                Toast.makeText(this, "Отчёт скопирован", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Закрыть", null)
+            .show()
     }
 }
 
