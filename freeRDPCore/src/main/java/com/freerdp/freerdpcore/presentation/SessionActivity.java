@@ -157,9 +157,6 @@ public class SessionActivity extends AppCompatActivity
 		prefs.edit().putBoolean("notif_perm_asked", true).apply();
 		requestPermissions(new String[] { android.Manifest.permission.POST_NOTIFICATIONS }, 7);
 	}
-
-	/** Log of the last unexpectedly dropped session; the app offers to share it. */
-	public static final String SESSION_LOG_FILE = "last_session_log.txt";
 	// fit-to-screen state: autoFit is cleared once the user zooms by hand
 	private boolean autoFit = true;
 	private int lastFitWidth = -1;
@@ -474,42 +471,6 @@ public class SessionActivity extends AppCompatActivity
 			SessionKeepAliveService.start(this, "demo.local");
 			Log.i(TAG, "Demo session " + size[0] + "x" + size[1]);
 		}, 1500);
-	}
-
-	/**
-	 * Save this process's recent logcat (FreeRDP's WLog goes there) so a dropped
-	 * session can be diagnosed. Passwords that FreeRDP may echo in its arguments
-	 * are masked.
-	 */
-	private void saveSessionLog(String reason)
-	{
-		try
-		{
-			Process proc = Runtime.getRuntime().exec(new String[] {
-			    "logcat", "-d", "-t", "600", "--pid=" + android.os.Process.myPid() });
-			StringBuilder log = new StringBuilder();
-			try (java.io.BufferedReader r = new java.io.BufferedReader(
-			         new java.io.InputStreamReader(proc.getInputStream())))
-			{
-				String line;
-				while ((line = r.readLine()) != null)
-					log.append(line).append('\n');
-			}
-			String text = "mRemoteDroid session log (" + reason + ")\n" +
-			              "Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT +
-			              "), " + Build.MANUFACTURER + " " + Build.MODEL + "\n\n" + log;
-			text = text.replaceAll("(/(?:p|gp):)\\S+", "$1***")
-			           .replaceAll("([?&](?:p|gp)=)[^&\\s]*", "$1***");
-			java.io.File out = new java.io.File(getFilesDir(), SESSION_LOG_FILE);
-			try (java.io.FileWriter w = new java.io.FileWriter(out))
-			{
-				w.write(text);
-			}
-		}
-		catch (Exception e)
-		{
-			Log.w(TAG, "could not save session log", e);
-		}
 	}
 
 	/** Hide status and navigation bars; a swipe from the edge shows them briefly. */
@@ -2002,10 +1963,7 @@ public class SessionActivity extends AppCompatActivity
 			}
 
 			// post error message on UI thread. A session that was already up and then
-			// failed is a dropped connection, not a failed connect: say so, and keep
-			// the FreeRDP log so the cause can be reported.
-			if (sessionConnected)
-				saveSessionLog("connection lost after connect");
+			// failed is a dropped connection, not a failed connect: say so.
 			if (!connectCancelledByUser)
 				uiHandler.sendMessage(Message.obtain(
 				    null, UIHandler.DISPLAY_TOAST,

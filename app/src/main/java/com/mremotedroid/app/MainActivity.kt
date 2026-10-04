@@ -34,20 +34,14 @@ class MainActivity : FragmentActivity() {
         setContent { MRemoteTheme { AppNav(repo, settings) } }
         // Not gated on savedInstanceState: after a crash Android restores the task
         // with saved state. Each report file is deleted once offered, so no repeats.
-        if (!offerReport(
-                MRemoteApp.CRASH_FILE,
-                "Приложение аварийно закрылось",
-                "Отправьте отчёт об ошибке разработчику — по нему можно найти и исправить причину. Пароли в отчёт не попадают.",
-                "mRemoteDroid crash report"
-            )
-        ) {
-            offerReport(
-                "last_session_log.txt", // = SessionActivity.SESSION_LOG_FILE
-                "Сеанс был прерван",
-                "Соединение оборвалось. Отправьте журнал сеанса разработчику — в нём видна причина. Пароли в журнал не попадают.",
-                "mRemoteDroid session log"
-            )
-        }
+        offerReport(
+            MRemoteApp.CRASH_FILE,
+            "Приложение аварийно закрылось",
+            "Отправьте отчёт об ошибке разработчику — по нему можно найти и исправить причину. Пароли в отчёт не попадают.",
+            "mRemoteDroid crash report"
+        )
+        // session logs are no longer collected; drop one left by an older version
+        File(filesDir, "last_session_log.txt").delete()
     }
 
     /** Offers to share a saved report file (then deletes it). Returns true if shown. */
