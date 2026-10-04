@@ -74,7 +74,7 @@
             android:name=".presentation.SessionActivity"
             android:theme="@style/Theme.Main"
             android:configChanges="orientation|keyboard|keyboardHidden|screenSize|smallestScreenSize|density|screenLayout|navigation"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="stateHidden|adjustResize">
             <!--android:configChanges="orientation|keyboardHidden|screenSize|keyboard"-->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

@@ -465,29 +465,52 @@ public class LibFreeRDP
 		return freerdp_parse_arguments(inst, arrayArgs);
 	}
 
+	// inst == 0 means "no native session" (the debug-only demo session in
+	// SessionActivity). Never hand a null instance to native code; log instead so
+	// input handling can be verified without a server.
 	public static boolean updateGraphics(long inst, Bitmap bitmap, int x, int y, int width,
 	                                     int height)
 	{
+		if (inst == 0)
+			return false;
 		return freerdp_update_graphics(inst, bitmap, x, y, width, height);
 	}
 
 	public static boolean sendCursorEvent(long inst, int x, int y, int flags)
 	{
+		if (inst == 0)
+		{
+			Log.d(TAG, "demo cursor x=" + x + " y=" + y + " flags=0x" + Integer.toHexString(flags));
+			return false;
+		}
 		return freerdp_send_cursor_event(inst, x, y, flags);
 	}
 
 	public static boolean sendKeyEvent(long inst, int keycode, boolean down)
 	{
+		if (inst == 0)
+		{
+			Log.d(TAG, "demo vk=0x" + Integer.toHexString(keycode) + (down ? " down" : " up"));
+			return false;
+		}
 		return freerdp_send_key_event(inst, keycode, down);
 	}
 
 	public static boolean sendUnicodeKeyEvent(long inst, int keycode, boolean down)
 	{
+		if (inst == 0)
+		{
+			if (down)
+				Log.d(TAG, "demo unicode '" + new String(Character.toChars(keycode)) + "'");
+			return false;
+		}
 		return freerdp_send_unicodekey_event(inst, keycode, down);
 	}
 
 	public static boolean sendClipboardData(long inst, String data)
 	{
+		if (inst == 0)
+			return false;
 		return freerdp_send_clipboard_data(inst, data);
 	}
 

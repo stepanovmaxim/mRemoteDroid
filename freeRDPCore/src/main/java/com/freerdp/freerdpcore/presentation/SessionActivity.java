@@ -44,8 +44,11 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import androidx.core.widget.ImageViewCompat;
 
+import android.content.pm.ApplicationInfo;
 import android.content.res.ColorStateList;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
@@ -141,6 +144,7 @@ public class SessionActivity extends AppCompatActivity
 	private int lastFitWidth = -1;
 	private int lastFitHeight = -1;
 	private View sessionMenuButton;
+	private PopupWindow sessionMenuPopup;
 	private static final float FAB_IDLE_ALPHA = 0.55f;
 	private boolean toggleMouseButtons = false;
 
@@ -282,8 +286,11 @@ public class SessionActivity extends AppCompatActivity
 		getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
 			@Override public void handleOnBackPressed()
 			{
-				// Back never drops the session: it closes keyboards, otherwise opens the menu.
-				if (sysKeyboardVisible || extKeyboardVisible)
+				// Back never drops the session: it closes the menu or keyboards, otherwise
+				// opens the menu.
+				if (sessionMenuPopup != null && sessionMenuPopup.isShowing())
+					sessionMenuPopup.dismiss();
+				else if (sysKeyboardVisible || extKeyboardVisible)
 					showKeyboard(false, false);
 				else
 					showSessionMenu(sessionMenuButton);
@@ -399,6 +406,52 @@ public class SessionActivity extends AppCompatActivity
 		applyImmersive();
 
 		setupSessionMenuButton();
+	}
+
+	// ****************************************************************************
+	// Debug-only demo session: the full session UI (floating menu, zoom, touch,
+	// keyboard/IME) over a placeholder desktop, with no native connection. Input is
+	// logged by LibFreeRDP (inst == 0). Lets the UI be tested without an RDP server:
+	//   adb shell am start -a android.intent.action.VIEW -d freerdp://demo.local
+	//     -n <app>/com.freerdp.freerdpcore.presentation.SessionActivity
+
+	private boolean isDemoUri(Uri uri)
+	{
+		boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+		return debuggable && "demo.local".equals(uri.getHost());
+	}
+
+	private void startDemoSession(Uri uri)
+	{
+		int[] size = landscapeSessionSize();
+		bitmap = Bitmap.createBitmap(size[0], size[1], Config.ARGB_8888);
+		Canvas canvas = new Canvas(bitmap);
+		canvas.drawColor(0xFF0B3D91);
+		Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+		paint.setColor(0x33FFFFFF);
+		for (int x = 0; x < size[0]; x += 100)
+			canvas.drawLine(x, 0, x, size[1], paint);
+		for (int y = 0; y < size[1]; y += 100)
+			canvas.drawLine(0, y, size[0], y, paint);
+		paint.setColor(Color.WHITE);
+		paint.setTextSize(size[1] / 12f);
+		canvas.drawText("mRemoteDroid demo " + size[0] + "x" + size[1], size[0] / 20f,
+		                size[1] / 2f, paint);
+
+		session = new SessionState(0, uri);
+		session.setSurface(new BitmapDrawable(getResources(), bitmap));
+
+		// mimic the real flow: a modal "Connecting..." dialog, then bind on success
+		final ProgressDialog dlg = new ProgressDialog(this);
+		dlg.setTitle("demo.local");
+		dlg.setMessage(getResources().getText(R.string.dlg_msg_connecting));
+		dlg.setCancelable(false);
+		dlg.show();
+		sessionView.postDelayed(() -> {
+			bindSession();
+			dlg.dismiss();
+			Log.i(TAG, "Demo session " + size[0] + "x" + size[1]);
+		}, 1500);
 	}
 
 	/** Hide status and navigation bars; a swipe from the edge shows them briefly. */
@@ -533,9 +586,13 @@ public class SessionActivity extends AppCompatActivity
 		list.setBackground(bg);
 		list.setPadding(dp(6), dp(6), dp(6), dp(6));
 
+		// Not focusable: the session window keeps input focus, so the soft keyboard
+		// stays bound (and open) while the menu is used. Outside taps still dismiss it;
+		// Back is handled by the activity's back callback.
 		final PopupWindow popup = new PopupWindow(list, ViewGroup.LayoutParams.WRAP_CONTENT,
-		                                          ViewGroup.LayoutParams.WRAP_CONTENT, true);
+		                                          ViewGroup.LayoutParams.WRAP_CONTENT, false);
 		popup.setOutsideTouchable(true);
+		sessionMenuPopup = popup;
 		popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 		popup.setElevation(dp(8));
 
@@ -606,9 +663,13 @@ public class SessionActivity extends AppCompatActivity
 	{
 		super.onWindowFocusChanged(hasFocus);
 		mClipboardManager.getPrimaryClipManually();
-		// dialogs/keyboard can bring the system bars back; hide them again
+		// dialogs/keyboard can bring the system bars back; hide them again, and take
+		// keyboard focus back (e.g. after the "Connecting..." dialog closes)
 		if (hasFocus)
+		{
 			applyImmersive();
+			ensureSessionViewFocus();
+		}
 	}
 
 	@Override protected void onStart()
@@ -704,7 +765,11 @@ public class SessionActivity extends AppCompatActivity
 		// get either session instance or create one from a bookmark/uri
 		Bundle bundle = intent.getExtras();
 		Uri openUri = intent.getData();
-		if (openUri != null)
+		if (openUri != null && isDemoUri(openUri))
+		{
+			startDemoSession(openUri);
+		}
+		else if (openUri != null)
 		{
 			// Launched from URI, e.g:
 			// freerdp://user@ip:port/connect?sound=&rfx=&p=password&clipboard=%2b&themes=-
@@ -854,6 +919,7 @@ public class SessionActivity extends AppCompatActivity
 		scrollView.requestLayout();
 		keyboardMapper.reset(this);
 		applyImmersive();
+		ensureSessionViewFocus();
 		scrollView.post(this::fitSessionToScreen);
 	}
 
@@ -862,17 +928,42 @@ public class SessionActivity extends AppCompatActivity
 		// SHOW_FORCED on a non-editor view is ignored by current Android/IMEs, and it
 		// silently failed while the menu popup still held window focus. The insets
 		// controller waits for focus; SessionView now reports itself as a text editor.
-		WindowInsetsControllerCompat controller =
+		final WindowInsetsControllerCompat controller =
 		    WindowCompat.getInsetsController(getWindow(), sessionView);
+		final InputMethodManager imm =
+		    (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
 		if (state)
 		{
-			sessionView.requestFocus();
-			controller.show(WindowInsetsCompat.Type.ime());
+			// The IME only shows for the view it is bound to. After the "Connecting..."
+			// dialog the session view could be unfocused, and a show request issued
+			// before the IME re-binds was dropped on some devices. Focus, (re)bind,
+			// then show on the next frame through both the new and the classic API.
+			ensureSessionViewFocus();
+			if (!imm.isActive(sessionView))
+				imm.restartInput(sessionView);
+			sessionView.post(() -> {
+				controller.show(WindowInsetsCompat.Type.ime());
+				imm.showSoftInput(sessionView, InputMethodManager.SHOW_IMPLICIT);
+			});
 		}
 		else
 		{
 			controller.hide(WindowInsetsCompat.Type.ime());
+			imm.hideSoftInputFromWindow(sessionView.getWindowToken(), 0);
 		}
+	}
+
+	private boolean isImeVisible()
+	{
+		WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(sessionView);
+		return insets != null ? insets.isVisible(WindowInsetsCompat.Type.ime()) : sysKeyboardVisible;
+	}
+
+	/** Keep keyboard focus on the session view so the IME stays bound to it. */
+	private void ensureSessionViewFocus()
+	{
+		if (sessionView != null && !sessionView.isFocused())
+			sessionView.requestFocus();
 	}
 
 	// displays either the system or the extended keyboard or non of them
@@ -1021,7 +1112,12 @@ public class SessionActivity extends AppCompatActivity
 		}
 		else if (itemId == R.id.session_sys_keyboard)
 		{
-			showKeyboard(!sysKeyboardVisible, false);
+			// toggle on what is actually on screen, not on our flag: if a show request
+			// was dropped, the flag would make the next tap "hide" an absent keyboard
+			boolean imeVisible = isImeVisible();
+			Log.d(TAG, "keyboard toggle: imeVisible=" + imeVisible +
+			               " focused=" + sessionView.isFocused());
+			showKeyboard(!imeVisible, false);
 		}
 		else if (itemId == R.id.session_ext_keyboard)
 		{
