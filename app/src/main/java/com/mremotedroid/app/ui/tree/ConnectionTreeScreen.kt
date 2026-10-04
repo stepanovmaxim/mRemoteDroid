@@ -63,6 +63,8 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mremotedroid.app.data.db.NodeEntity
 import com.mremotedroid.app.data.model.Protocol
+import androidx.compose.material3.Button
+import com.mremotedroid.app.launch.EmbeddedRdpLauncher
 import com.mremotedroid.app.launch.RdpLauncher
 import com.mremotedroid.app.security.BiometricGate
 
@@ -117,33 +119,46 @@ fun ConnectionTreeScreen(
         }
     }
 
-    fun doLaunch(node: NodeEntity, useUri: Boolean) {
+    fun doLaunch(node: NodeEntity, mode: LaunchMode) {
         val hasPassword = node.credentialBlob != null
-        val res = if (useUri) RdpLauncher.launchViaUri(context, node, vm.passwordFor(node))
-        else RdpLauncher.launchViaRdpFile(context, node, vm.passwordFor(node))
-        if (res == RdpLauncher.LaunchResult.Ok && !useUri && hasPassword) {
-            // The .rdp path can't carry the password to the MS client; it's on the clipboard.
-            Toast.makeText(
-                context,
-                "Пароль скопирован в буфер — вставьте в поле пароля (долгое нажатие → Вставить).",
-                Toast.LENGTH_LONG
-            ).show()
-        } else {
-            reportLaunch(context, res)
+        val password = vm.passwordFor(node)
+        when (mode) {
+            LaunchMode.EMBEDDED -> {
+                when (val res = EmbeddedRdpLauncher.launch(context, node, password)) {
+                    EmbeddedRdpLauncher.Result.Ok ->
+                        Toast.makeText(context, "Подключение…", Toast.LENGTH_SHORT).show()
+                    is EmbeddedRdpLauncher.Result.Error ->
+                        Toast.makeText(context, res.message, Toast.LENGTH_LONG).show()
+                }
+            }
+            LaunchMode.URI -> reportLaunch(context, RdpLauncher.launchViaUri(context, node, password))
+            LaunchMode.FILE -> {
+                val res = RdpLauncher.launchViaRdpFile(context, node, password)
+                if (res == RdpLauncher.LaunchResult.Ok && hasPassword) {
+                    // The .rdp path can't carry the password to the MS client; it's on the clipboard.
+                    Toast.makeText(
+                        context,
+                        "Пароль скопирован в буфер — вставьте в поле пароля (долгое нажатие → Вставить).",
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    reportLaunch(context, res)
+                }
+            }
         }
     }
 
-    fun launchWithGate(node: NodeEntity, useUri: Boolean) {
+    fun launchWithGate(node: NodeEntity, mode: LaunchMode) {
         if (vm.needsUnlock(node) && activity != null) {
             BiometricGate.authenticate(
                 activity = activity,
                 title = "Разблокировка паролей",
                 subtitle = node.name,
-                onSuccess = { vm.markUnlocked(); doLaunch(node, useUri) },
+                onSuccess = { vm.markUnlocked(); doLaunch(node, mode) },
                 onFailure = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
             )
         } else {
-            doLaunch(node, useUri)
+            doLaunch(node, mode)
         }
     }
 
@@ -301,8 +316,9 @@ fun ConnectionTreeScreen(
         LaunchDialog(
             node = node,
             installed = RdpLauncher.installedClients(context),
-            onFile = { launchWithGate(node, useUri = false); launchTarget = null },
-            onUri = { launchWithGate(node, useUri = true); launchTarget = null },
+            onEmbedded = { launchWithGate(node, LaunchMode.EMBEDDED); launchTarget = null },
+            onFile = { launchWithGate(node, LaunchMode.FILE); launchTarget = null },
+            onUri = { launchWithGate(node, LaunchMode.URI); launchTarget = null },
             onDismiss = { launchTarget = null }
         )
     }
@@ -490,6 +506,7 @@ private fun PasswordActionDialog(
 private fun LaunchDialog(
     node: NodeEntity,
     installed: List<Pair<String, String>>,
+    onEmbedded: () -> Unit,
     onFile: () -> Unit,
     onUri: () -> Unit,
     onDismiss: () -> Unit
@@ -500,36 +517,33 @@ private fun LaunchDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("${node.hostname}:${node.port}", style = MaterialTheme.typography.bodyMedium)
-                if (installed.isEmpty()) {
+                Text(
+                    "• Встроенный RDP — сеанс прямо в приложении, с паролем, без внешнего клиента.\n" +
+                        "• .rdp — любой клиент (в т.ч. Microsoft RD); пароль копируется в буфер для вставки.\n" +
+                        "• rdp:// — aFreeRDP: подключается сразу с паролем.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (installed.isNotEmpty()) {
                     Text(
-                        "RDP-клиент не найден. Установите Microsoft Remote Desktop или aFreeRDP.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                } else {
-                    Text(
-                        "Найдены клиенты: " + installed.joinToString { it.second },
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-                if (node.credentialBlob != null) {
-                    Text(
-                        "• .rdp — любой клиент (в т.ч. Microsoft RD). Пароль MS-клиенту передать нельзя, " +
-                            "поэтому он копируется в буфер — вставьте в поле пароля.\n" +
-                            "• rdp:// — aFreeRDP: подключается сразу с паролем, без ввода.",
+                        "Внешние клиенты: " + installed.joinToString { it.second },
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Button(onClick = onEmbedded, modifier = Modifier.fillMaxWidth()) {
+                        Text("Встроенный RDP")
+                    }
+                    Row {
+                        TextButton(onClick = onFile) { Text("Открыть (.rdp)") }
+                        Spacer(Modifier.width(8.dp))
+                        TextButton(onClick = onUri) { Text("rdp://") }
+                    }
+                }
             }
         },
-        confirmButton = {
-            TextButton(onClick = onFile) { Text("Открыть (.rdp)") }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onUri) { Text("rdp://") }
-                Spacer(Modifier.width(8.dp))
-                TextButton(onClick = onDismiss) { Text("Отмена") }
-            }
-        }
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } }
     )
 }
+
+private enum class LaunchMode { FILE, URI, EMBEDDED }
