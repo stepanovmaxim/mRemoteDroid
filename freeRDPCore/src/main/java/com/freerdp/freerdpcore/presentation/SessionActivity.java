@@ -141,6 +141,7 @@ public class SessionActivity extends AppCompatActivity
 	private boolean refitPending = false;
 	private boolean imeShown = false;
 	private boolean sessionConnected = false;
+	private boolean disconnectRequested = false;
 	private String sessionTitle;
 
 	/** Android 13+: the keep-alive notification needs permission to be visible. */
@@ -1149,6 +1150,7 @@ public class SessionActivity extends AppCompatActivity
 		else if (itemId == R.id.session_disconnect)
 		{
 			showKeyboard(false, false);
+			disconnectRequested = true;
 			LibFreeRDP.disconnect(session.getInstance());
 		}
 
@@ -1170,6 +1172,7 @@ public class SessionActivity extends AppCompatActivity
 	{
 		if (keyCode == KeyEvent.KEYCODE_BACK)
 		{
+			disconnectRequested = true;
 			LibFreeRDP.disconnect(session.getInstance());
 			return true;
 		}
@@ -1963,8 +1966,10 @@ public class SessionActivity extends AppCompatActivity
 			}
 
 			// post error message on UI thread. A session that was already up and then
-			// failed is a dropped connection, not a failed connect: say so.
-			if (!connectCancelledByUser)
+			// failed is a dropped connection, not a failed connect: say so. The native
+			// loop also reports a user-requested disconnect as a failure (the disconnect
+			// event ends it with an error status) - that is not an error for the user.
+			if (!connectCancelledByUser && !disconnectRequested)
 				uiHandler.sendMessage(Message.obtain(
 				    null, UIHandler.DISPLAY_TOAST,
 				    getResources().getText(sessionConnected ? R.string.session_connection_lost
