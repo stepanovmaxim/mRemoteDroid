@@ -5,6 +5,7 @@ import android.util.Log
 import com.freerdp.freerdpcore.application.GlobalApp
 import com.mremotedroid.app.data.db.AppDatabase
 import com.mremotedroid.app.data.repo.ConnectionRepository
+import com.mremotedroid.app.launch.ActiveSessions
 import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -32,6 +33,7 @@ class MRemoteApp : GlobalApp() {
         try {
             super.onCreate()
             embeddedRdpAvailable = true
+            ActiveSessions.init()
         } catch (t: Throwable) {
             // Application.onCreate already ran inside GlobalApp before the native load.
             Log.e("MRemoteApp", "FreeRDP native init failed; embedded RDP disabled", t)

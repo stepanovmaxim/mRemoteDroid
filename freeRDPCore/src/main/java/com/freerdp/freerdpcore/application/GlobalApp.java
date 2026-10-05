@@ -28,6 +28,9 @@ import com.freerdp.freerdpcore.services.QuickConnectHistoryGateway;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
@@ -89,18 +92,78 @@ public class GlobalApp extends Application implements LibFreeRDP.EventListener
 		}
 	}
 
+	// Several sessions can be open at once, each in its own window/task.
+	public static final int MAX_SESSIONS = 5;
+
+	private static final List<Runnable> sessionListeners = new CopyOnWriteArrayList<>();
+	private static final Map<String, Uri> pendingConnections =
+	    Collections.synchronizedMap(new HashMap<String, Uri>());
+
+	/** Called (on the main thread) whenever a session is opened or closed. */
+	public static void addSessionListener(Runnable listener)
+	{
+		sessionListeners.add(listener);
+	}
+
+	public static void removeSessionListener(Runnable listener)
+	{
+		sessionListeners.remove(listener);
+	}
+
+	private static void notifySessionsChanged()
+	{
+		for (Runnable l : sessionListeners)
+			l.run();
+	}
+
+	/**
+	 * Hands a connection URI (it carries the password) to the session window in memory.
+	 * The window's own intent only gets the returned token: Android keeps document
+	 * intents in the recents list and persists them, so no secrets may go there.
+	 */
+	public static String putPendingConnection(Uri connectUri)
+	{
+		String token = UUID.randomUUID().toString();
+		pendingConnections.put(token, connectUri);
+		return token;
+	}
+
+	public static Uri takePendingConnection(String token)
+	{
+		return token != null ? pendingConnections.remove(token) : null;
+	}
+
+	/** The open session started for this connection tag, if any. */
+	public static SessionState findSessionByTag(String tag)
+	{
+		if (tag == null)
+			return null;
+		for (SessionState s : getSessions())
+			if (tag.equals(s.getTag()))
+				return s;
+		return null;
+	}
+
 	// RDP session handling
 	static public SessionState createSession(BookmarkBase bookmark, Context context)
 	{
 		SessionState session = new SessionState(LibFreeRDP.newInstance(context), bookmark);
 		sessionMap.put(session.getInstance(), session);
+		notifySessionsChanged();
 		return session;
 	}
 
 	static public SessionState createSession(Uri openUri, Context context)
 	{
+		return createSession(openUri, null, context);
+	}
+
+	static public SessionState createSession(Uri openUri, String tag, Context context)
+	{
 		SessionState session = new SessionState(LibFreeRDP.newInstance(context), openUri);
+		session.setTag(tag);
 		sessionMap.put(session.getInstance(), session);
+		notifySessionsChanged();
 		return session;
 	}
 
@@ -121,6 +184,7 @@ public class GlobalApp extends Application implements LibFreeRDP.EventListener
 		{
 			GlobalApp.sessionMap.remove(instance);
 			LibFreeRDP.freeInstance(instance);
+			notifySessionsChanged();
 		}
 	}
 

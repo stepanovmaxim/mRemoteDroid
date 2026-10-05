@@ -66,7 +66,12 @@ import com.mremotedroid.app.data.model.Protocol
 import androidx.compose.material3.Button
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import com.mremotedroid.app.launch.ActiveSessions
 import com.mremotedroid.app.launch.EmbeddedRdpLauncher
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import com.mremotedroid.app.security.BiometricGate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,6 +87,7 @@ fun ConnectionTreeScreen(
     val message by vm.message.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
     val sort by vm.sort.collectAsStateWithLifecycle()
+    val openSessions by ActiveSessions.nodeIds.collectAsStateWithLifecycle()
 
     var overflowOpen by remember { mutableStateOf(false) }
     var sortMenuOpen by remember { mutableStateOf(false) }
@@ -128,6 +134,8 @@ fun ConnectionTreeScreen(
     }
 
     fun connectWithGate(node: NodeEntity) {
+        // an open session needs no password: just switch to its window
+        if (EmbeddedRdpLauncher.reopen(context, node)) return
         if (vm.needsUnlock(node) && activity != null) {
             BiometricGate.authenticate(
                 activity = activity,
@@ -237,6 +245,7 @@ fun ConnectionTreeScreen(
                             node = row.node,
                             depth = row.depth,
                             hasChildren = row.hasChildren,
+                            sessionOpen = row.node.id in openSessions,
                             onToggle = { vm.toggleExpand(row.node) },
                             onOpen = {
                                 if (row.node.nodeType == NodeEntity.TYPE_CONNECTION) connectWithGate(row.node)
@@ -292,11 +301,14 @@ fun ConnectionTreeScreen(
     }
 }
 
+private val SessionOpenColor = Color(0xFF2E7D32)
+
 @Composable
 private fun TreeRowItem(
     node: NodeEntity,
     depth: Int,
     hasChildren: Boolean,
+    sessionOpen: Boolean,
     onToggle: () -> Unit,
     onOpen: () -> Unit,
     onEdit: () -> Unit,
@@ -329,11 +341,22 @@ private fun TreeRowItem(
             )
         } else {
             Spacer(Modifier.width(24.dp))
-            Icon(
-                Icons.Default.Computer,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
+            Box {
+                Icon(
+                    Icons.Default.Computer,
+                    contentDescription = null,
+                    tint = if (sessionOpen) SessionOpenColor else MaterialTheme.colorScheme.primary
+                )
+                if (sessionOpen) {
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(10.dp)
+                            .background(SessionOpenColor, CircleShape)
+                            .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                    )
+                }
+            }
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -345,6 +368,13 @@ private fun TreeRowItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (sessionOpen) {
+                    Text(
+                        "Сеанс открыт — нажмите, чтобы вернуться",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SessionOpenColor
+                    )
+                }
             }
         }
         Box {

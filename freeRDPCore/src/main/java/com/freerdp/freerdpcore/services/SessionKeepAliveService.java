@@ -18,6 +18,12 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import com.freerdp.freerdpcore.R;
+import com.freerdp.freerdpcore.presentation.SessionIntents;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Foreground service held while an RDP session is connected.
@@ -34,15 +40,21 @@ public class SessionKeepAliveService extends Service
 	private static final String TAG = "SessionKeepAlive";
 	private static final String CHANNEL_ID = "rdp_session";
 	private static final int NOTIFICATION_ID = 4242;
-	private static final String EXTRA_TITLE = "title";
 
 	private PowerManager.WakeLock wakeLock;
 	private WifiManager.WifiLock wifiLock;
 
-	public static void start(Context context, String title)
+	/** Connected sessions: instance -> {title, document tag}. */
+	private static final Map<Long, String[]> sessions = new LinkedHashMap<>();
+
+	/** Registers a connected session; the first one starts the foreground service. */
+	public static void start(Context context, long instance, String title, String tag)
 	{
+		synchronized (sessions)
+		{
+			sessions.put(instance, new String[] { title != null ? title : "", tag });
+		}
 		Intent i = new Intent(context, SessionKeepAliveService.class);
-		i.putExtra(EXTRA_TITLE, title);
 		try
 		{
 			context.startService(i); // the app is in the foreground when a session connects
@@ -53,15 +65,40 @@ public class SessionKeepAliveService extends Service
 		}
 	}
 
-	public static void stop(Context context)
+	/** Unregisters a session; the service stops with the last one. */
+	public static void stop(Context context, long instance)
 	{
-		context.stopService(new Intent(context, SessionKeepAliveService.class));
+		boolean empty;
+		synchronized (sessions)
+		{
+			if (sessions.remove(instance) == null)
+				return;
+			empty = sessions.isEmpty();
+		}
+		Intent i = new Intent(context, SessionKeepAliveService.class);
+		if (empty)
+			context.stopService(i);
+		else
+		{
+			try
+			{
+				context.startService(i); // refresh the notification
+			}
+			catch (Exception e)
+			{
+				Log.w(TAG, "could not update keep-alive service", e);
+			}
+		}
 	}
 
 	@Override public int onStartCommand(Intent intent, int flags, int startId)
 	{
-		String title = intent != null ? intent.getStringExtra(EXTRA_TITLE) : null;
-		Notification notification = buildNotification(title != null ? title : "");
+		Notification notification = buildNotification();
+		if (notification == null)
+		{
+			stopSelf();
+			return START_NOT_STICKY;
+		}
 		try
 		{
 			if (Build.VERSION.SDK_INT >= 34)
@@ -80,8 +117,16 @@ public class SessionKeepAliveService extends Service
 		return START_NOT_STICKY;
 	}
 
-	private Notification buildNotification(String title)
+	private Notification buildNotification()
 	{
+		List<String[]> list;
+		synchronized (sessions)
+		{
+			list = new ArrayList<>(sessions.values());
+		}
+		if (list.isEmpty())
+			return null;
+
 		NotificationManager nm = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
 		if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CHANNEL_ID) == null)
 		{
@@ -92,21 +137,48 @@ public class SessionKeepAliveService extends Service
 			nm.createNotificationChannel(ch);
 		}
 
-		// tapping brings the app's task (with the session on top) back to the front
-		Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
+		// One session: tapping returns straight to it. Several: to the connection list,
+		// where the open ones are marked.
+		Intent open;
+		String title;
+		String text;
+		if (list.size() == 1)
+		{
+			title = getString(R.string.session_notification_title, list.get(0)[0]);
+			text = getString(R.string.session_notification_text);
+			open = SessionIntents.reopen(this, list.get(0)[1]);
+		}
+		else
+		{
+			title = getString(R.string.session_notification_title_many, list.size());
+			StringBuilder names = new StringBuilder();
+			for (String[] item : list)
+			{
+				if (names.length() > 0)
+					names.append(", ");
+				names.append(item[0]);
+			}
+			text = names.toString();
+			open = null;
+		}
+		if (open == null)
+		{
+			open = getPackageManager().getLaunchIntentForPackage(getPackageName());
+			if (open != null)
+				open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
+				              Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+		}
 		PendingIntent content = null;
 		if (open != null)
-		{
-			open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
 			content = PendingIntent.getActivity(this, 0, open,
 			                                    PendingIntent.FLAG_IMMUTABLE |
 			                                        PendingIntent.FLAG_UPDATE_CURRENT);
-		}
 
 		return new NotificationCompat.Builder(this, CHANNEL_ID)
 		    .setSmallIcon(R.drawable.ic_stat_session)
-		    .setContentTitle(getString(R.string.session_notification_title, title))
-		    .setContentText(getString(R.string.session_notification_text))
+		    .setContentTitle(title)
+		    .setContentText(text)
+		    .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
 		    .setContentIntent(content)
 		    .setOngoing(true)
 		    .setOnlyAlertOnce(true)

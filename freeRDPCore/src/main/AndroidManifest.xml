@@ -19,7 +19,11 @@
             android:name=".presentation.SessionActivity"
             android:theme="@style/Theme.Main"
             android:configChanges="orientation|keyboard|keyboardHidden|screenSize|smallestScreenSize|density|screenLayout|navigation"
-            android:windowSoftInputMode="stateHidden|adjustResize" />
+            android:windowSoftInputMode="stateHidden|adjustResize"
+            android:documentLaunchMode="intoExisting"
+            android:autoRemoveFromRecents="true"
+            android:persistableMode="persistNever"
+            android:maxRecents="10" />
 
         <service
             android:name=".services.SessionKeepAliveService"

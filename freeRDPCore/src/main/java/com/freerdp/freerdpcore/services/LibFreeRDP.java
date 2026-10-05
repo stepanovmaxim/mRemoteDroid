@@ -153,6 +153,8 @@ public class LibFreeRDP
 
 	private static native boolean freerdp_send_clipboard_data(long inst, String data);
 
+	private static native boolean freerdp_send_suppress_output(long inst, boolean suppress);
+
 	private static native String freerdp_get_last_error_string(long inst);
 
 	public static void setEventListener(EventListener l)
@@ -512,6 +514,14 @@ public class LibFreeRDP
 		if (inst == 0)
 			return false;
 		return freerdp_send_clipboard_data(inst, data);
+	}
+
+	/** Ask the server to stop (true) or resume (false) sending graphics. */
+	public static boolean sendSuppressOutput(long inst, boolean suppress)
+	{
+		if (inst == 0)
+			return false;
+		return freerdp_send_suppress_output(inst, suppress);
 	}
 
 	private static void OnConnectionSuccess(long inst)

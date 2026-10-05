@@ -10,6 +10,7 @@
 
 package com.freerdp.freerdpcore.presentation;
 
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -90,7 +91,6 @@ import com.freerdp.freerdpcore.utils.ClipboardManagerProxy;
 import com.freerdp.freerdpcore.utils.KeyboardMapper;
 import com.freerdp.freerdpcore.utils.Mouse;
 
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
@@ -102,6 +102,9 @@ public class SessionActivity extends AppCompatActivity
 {
 	public static final String PARAM_CONNECTION_REFERENCE = "conRef";
 	public static final String PARAM_INSTANCE = "instance";
+	/** Token for {@link GlobalApp#takePendingConnection}; the intent's data is the tag. */
+	public static final String PARAM_PENDING_CONNECTION = "pendingConnection";
+
 	private static final float ZOOMING_STEP = 0.5f;
 	private static final int ZOOMCONTROLS_AUTOHIDE_TIMEOUT = 4000;
 	// timeout between subsequent scrolling requests when the touch-pointer is
@@ -142,6 +145,8 @@ public class SessionActivity extends AppCompatActivity
 	private boolean imeShown = false;
 	private boolean sessionConnected = false;
 	private boolean disconnectRequested = false;
+	private boolean activityVisible = false;
+	private String sessionTag;
 
 	// Session screen rotation, chosen in the session menu and remembered.
 	// AUTO follows the orientation sensor even when the system auto-rotate is
@@ -503,7 +508,7 @@ public class SessionActivity extends AppCompatActivity
 		sessionView.postDelayed(() -> {
 			bindSession();
 			dlg.dismiss();
-			SessionKeepAliveService.start(this, "demo.local");
+			SessionKeepAliveService.start(this, 0, "demo.local", getIntent().getDataString());
 			Log.i(TAG, "Demo session " + size[0] + "x" + size[1]);
 		}, 1500);
 	}
@@ -663,6 +668,8 @@ public class SessionActivity extends AppCompatActivity
 		                  R.id.session_orientation);
 		addSessionMenuRow(list, popup, R.drawable.ic_session_fit,
 		                  getString(R.string.menu_fit_screen), R.id.session_fit_screen);
+		addSessionMenuRow(list, popup, R.drawable.ic_session_list, getString(R.string.menu_to_list),
+		                  R.id.session_to_list);
 		addSessionMenuRow(list, popup, R.drawable.icon_menu_disconnect,
 		                  getString(R.string.menu_disconnect), R.id.session_disconnect);
 
@@ -732,6 +739,23 @@ public class SessionActivity extends AppCompatActivity
 	{
 		super.onStart();
 		Log.v(TAG, "Session.onStart");
+		activityVisible = true;
+		updateSuppressOutput();
+	}
+
+	/** Stop graphics while this session window is not visible; resume (repaint) when it is. */
+	private void updateSuppressOutput()
+	{
+		if (session != null && sessionConnected)
+			LibFreeRDP.sendSuppressOutput(session.getInstance(), !activityVisible);
+	}
+
+	@Override protected void onNewIntent(Intent intent)
+	{
+		super.onNewIntent(intent);
+		// Reopened from the connection list / notification: this window already runs
+		// the session. Drop a connection handed over in a race, it is not needed.
+		GlobalApp.takePendingConnection(intent.getStringExtra(PARAM_PENDING_CONNECTION));
 	}
 
 	@Override protected void onRestart()
@@ -759,13 +783,15 @@ public class SessionActivity extends AppCompatActivity
 	{
 		super.onStop();
 		Log.v(TAG, "Session.onStop");
+		activityVisible = false;
+		updateSuppressOutput();
 	}
 
 	@Override protected void onDestroy()
 	{
-		// the session ends with this activity; drop the keep-alive notification
-		if (isFinishing())
-			SessionKeepAliveService.stop(this);
+		// the session ends with its window (also when its card is swiped out of Recents)
+		if (session != null)
+			SessionKeepAliveService.stop(this, session.getInstance());
 		if (connectThread != null)
 		{
 			connectThread.interrupt();
@@ -776,9 +802,8 @@ public class SessionActivity extends AppCompatActivity
 		// Cancel running disconnect timers.
 		GlobalApp.cancelDisconnectTimer();
 
-		// Disconnect all remaining sessions.
-		Collection<SessionState> sessions = GlobalApp.getSessions();
-		for (SessionState session : sessions)
+		// Disconnect this window's session only; other sessions live in their own windows.
+		if (session != null && session.getInstance() != 0)
 			LibFreeRDP.disconnect(session.getInstance());
 
 		// unregister freerdp events broadcast receiver
@@ -788,7 +813,11 @@ public class SessionActivity extends AppCompatActivity
 		mClipboardManager.removeClipboardboardChangedListener(this);
 
 		// free session
-		GlobalApp.freeSession(session.getInstance());
+		if (session != null)
+		{
+			session.setUIEventListener(null);
+			GlobalApp.freeSession(session.getInstance());
+		}
 
 		session = null;
 	}
@@ -824,7 +853,21 @@ public class SessionActivity extends AppCompatActivity
 		// get either session instance or create one from a bookmark/uri
 		Bundle bundle = intent.getExtras();
 		Uri openUri = intent.getData();
-		if (openUri != null && isDemoUri(openUri))
+		if (bundle != null && bundle.containsKey(PARAM_PENDING_CONNECTION))
+		{
+			// opened from the connection list: the real URI (with the password) was
+			// handed over in memory; the intent's data is only the connection's tag
+			Uri connectUri =
+			    GlobalApp.takePendingConnection(bundle.getString(PARAM_PENDING_CONNECTION));
+			if (connectUri == null)
+				closeSessionActivity(RESULT_CANCELED); // stale window restored from Recents
+			else
+			{
+				sessionTag = intent.getDataString();
+				connect(connectUri);
+			}
+		}
+		else if (openUri != null && isDemoUri(openUri))
 		{
 			startDemoSession(openUri);
 		}
@@ -922,9 +965,9 @@ public class SessionActivity extends AppCompatActivity
 			    openUri.buildUpon().appendQueryParameter("size", size[0] + "x" + size[1]).build();
 			Log.i(TAG, "Session resolution " + size[0] + "x" + size[1]);
 		}
-		session = GlobalApp.createSession(openUri, getApplicationContext());
+		session = GlobalApp.createSession(openUri, sessionTag, getApplicationContext());
 
-		connectWithTitle(openUri.getAuthority());
+		connectWithTitle(openUri.getHost());
 	}
 
 	static class ConnectThread extends Thread
@@ -949,7 +992,10 @@ public class SessionActivity extends AppCompatActivity
 	private void connectWithTitle(String title)
 	{
 		sessionTitle = title;
+		session.setTitle(title);
 		session.setUIEventListener(this);
+		// name the Recents card after the connection
+		setTaskDescription(new ActivityManager.TaskDescription(title));
 
 		progressDialog = new ProgressDialog(this);
 		progressDialog.setTitle(title);
@@ -1193,6 +1239,18 @@ public class SessionActivity extends AppCompatActivity
 		else if (itemId == R.id.session_ext_keyboard)
 		{
 			showKeyboard(false, !extKeyboardVisible);
+		}
+		else if (itemId == R.id.session_to_list)
+		{
+			// leave the session running in its own window and show the connection list
+			showKeyboard(false, false);
+			Intent list = getPackageManager().getLaunchIntentForPackage(getPackageName());
+			if (list != null)
+			{
+				list.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
+				              Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+				startActivity(list);
+			}
 		}
 		else if (itemId == R.id.session_disconnect)
 		{
@@ -1964,12 +2022,15 @@ public class SessionActivity extends AppCompatActivity
 			Log.v(TAG, "OnConnectionSuccess");
 			sessionConnected = true;
 			// keep the connection alive when the screen goes off / app goes background
-			SessionKeepAliveService.start(SessionActivity.this,
-			                              sessionTitle != null ? sessionTitle : "");
+			SessionKeepAliveService.start(SessionActivity.this, session.getInstance(),
+			                              sessionTitle != null ? sessionTitle : "",
+			                              getIntent().getDataString());
 			requestNotificationPermissionOnce();
 
 			// bind session
 			bindSession();
+			if (!activityVisible)
+				updateSuppressOutput();
 
 			if (progressDialog != null)
 			{
@@ -2001,7 +2062,7 @@ public class SessionActivity extends AppCompatActivity
 		private void OnConnectionFailure(Context context)
 		{
 			Log.v(TAG, "OnConnectionFailure");
-			SessionKeepAliveService.stop(SessionActivity.this);
+			SessionKeepAliveService.stop(SessionActivity.this, session.getInstance());
 
 			// remove pending move events
 			uiHandler.removeMessages(UIHandler.SEND_MOVE_EVENT);
@@ -2028,7 +2089,7 @@ public class SessionActivity extends AppCompatActivity
 		private void OnDisconnected(Context context)
 		{
 			Log.v(TAG, "OnDisconnected");
-			SessionKeepAliveService.stop(SessionActivity.this);
+			SessionKeepAliveService.stop(SessionActivity.this, session.getInstance());
 
 			// remove pending move events
 			uiHandler.removeMessages(UIHandler.SEND_MOVE_EVENT);

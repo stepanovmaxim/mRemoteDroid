@@ -1,9 +1,9 @@
 package com.mremotedroid.app.launch
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
-import com.freerdp.freerdpcore.presentation.SessionActivity
+import com.freerdp.freerdpcore.application.GlobalApp
+import com.freerdp.freerdpcore.presentation.SessionIntents
 import com.mremotedroid.app.data.db.NodeEntity
 import java.net.URLEncoder
 
@@ -13,7 +13,7 @@ import java.net.URLEncoder
  *
  * It builds a `freerdp://user@host:port/connect?...` URI that
  * [com.freerdp.freerdpcore.services.LibFreeRDP.setConnectionInfo] turns into
- * FreeRDP command-line arguments, and starts [SessionActivity] with it.
+ * FreeRDP command-line arguments, and starts SessionActivity with it.
  */
 object EmbeddedRdpLauncher {
 
@@ -22,7 +22,18 @@ object EmbeddedRdpLauncher {
         data class Error(val message: String) : Result
     }
 
+    /** Brings the already open session for [node] to the front; false if none is open. */
+    fun reopen(context: Context, node: NodeEntity): Boolean {
+        if (!ActiveSessions.isOpen(node.id)) return false
+        context.startActivity(SessionIntents.reopen(context, ActiveSessions.tagFor(node.id)))
+        return true
+    }
+
     fun launch(context: Context, node: NodeEntity, plainPassword: String?): Result {
+        if (reopen(context, node)) return Result.Ok
+        if (ActiveSessions.count() >= GlobalApp.MAX_SESSIONS) {
+            return Result.Error("Открыто максимум ${GlobalApp.MAX_SESSIONS} сеансов. Закройте один из них.")
+        }
         return try {
             // No explicit size: SessionActivity picks a landscape resolution matching
             // the screen and fits it to the current orientation.
@@ -47,11 +58,11 @@ object EmbeddedRdpLauncher {
                 builder.appendQueryParameter("g", node.gatewayHostname)
             }
 
-            val intent = Intent(context, SessionActivity::class.java).apply {
-                data = builder.build()
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
+            // Each session gets its own window (task / Recents card). The connection URI
+            // carries the password, so it is handed over in memory, not in the intent.
+            context.startActivity(
+                SessionIntents.connect(context, ActiveSessions.tagFor(node.id), builder.build())
+            )
             Result.Ok
         } catch (e: Exception) {
             Result.Error(e.message ?: "Не удалось запустить встроенный сеанс")

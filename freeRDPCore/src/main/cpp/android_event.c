@@ -234,6 +234,25 @@ static BOOL android_process_event(ANDROID_EVENT_QUEUE* queue, freerdp* inst)
 			}
 			break;
 
+			case EVENT_TYPE_SUPPRESS_OUTPUT:
+			{
+				/* The session window went to the background (another session, the
+				 * connection list, screen off) or came back. While suppressed the server
+				 * sends no graphics, saving traffic and battery; on resume it repaints
+				 * the whole desktop. A no-op if the server doesn't support it. */
+				ANDROID_EVENT_SUPPRESS_OUTPUT* so = (ANDROID_EVENT_SUPPRESS_OUTPUT*)event;
+				RECTANGLE_16 rect = { 0 };
+				rect.right = (UINT16)freerdp_settings_get_uint32(context->settings,
+				                                                 FreeRDP_DesktopWidth);
+				rect.bottom = (UINT16)freerdp_settings_get_uint32(context->settings,
+				                                                  FreeRDP_DesktopHeight);
+				rc = TRUE;
+				if (context->update && context->update->SuppressOutput)
+					rc = context->update->SuppressOutput(context, so->suppress ? 0 : 1,
+					                                     so->suppress ? NULL : &rect);
+			}
+			break;
+
 			case EVENT_TYPE_DISCONNECT:
 			default:
 				break;
@@ -363,6 +382,19 @@ ANDROID_EVENT* android_event_disconnect_new(void)
 
 	event->type = EVENT_TYPE_DISCONNECT;
 	return event;
+}
+
+ANDROID_EVENT* android_event_suppress_output_new(BOOL suppress)
+{
+	ANDROID_EVENT_SUPPRESS_OUTPUT* event =
+	    (ANDROID_EVENT_SUPPRESS_OUTPUT*)calloc(1, sizeof(ANDROID_EVENT_SUPPRESS_OUTPUT));
+
+	if (!event)
+		return NULL;
+
+	event->type = EVENT_TYPE_SUPPRESS_OUTPUT;
+	event->suppress = suppress;
+	return (ANDROID_EVENT*)event;
 }
 
 static void android_event_disconnect_free(ANDROID_EVENT* event)
@@ -500,6 +532,10 @@ void android_event_free(ANDROID_EVENT* event)
 
 		case EVENT_TYPE_CLIPBOARD:
 			android_event_clipboard_free((ANDROID_EVENT_CLIPBOARD*)event);
+			break;
+
+		case EVENT_TYPE_SUPPRESS_OUTPUT:
+			free(event);
 			break;
 
 		default:

@@ -39,6 +39,10 @@ public class SessionState implements Parcelable
 	private final Uri openUri;
 	private BitmapDrawable surface;
 	private LibFreeRDP.UIEventListener uiEventListener;
+	// identity of the connection this session was opened for (the session window's
+	// document URI), so the app can find it again instead of opening a duplicate
+	private String tag;
+	private String title;
 
 	public SessionState(Parcel parcel)
 	{
@@ -102,6 +106,26 @@ public class SessionState implements Parcelable
 	public void setUIEventListener(LibFreeRDP.UIEventListener uiEventListener)
 	{
 		this.uiEventListener = uiEventListener;
+	}
+
+	public String getTag()
+	{
+		return tag;
+	}
+
+	public void setTag(String tag)
+	{
+		this.tag = tag;
+	}
+
+	public String getTitle()
+	{
+		return title;
+	}
+
+	public void setTitle(String title)
+	{
+		this.title = title;
 	}
 
 	public BitmapDrawable getSurface()

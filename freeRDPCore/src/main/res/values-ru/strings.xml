@@ -11,6 +11,8 @@
     <string name="session_connection_lost">Соединение с сервером прервано</string>
     <string name="session_notification_channel">Активный сеанс RDP</string>
     <string name="session_notification_title">Подключено: %1$s</string>
+    <string name="session_notification_title_many">Открыто сеансов: %1$d</string>
+    <string name="menu_to_list">К списку подключений</string>
     <string name="session_notification_text">Сеанс остаётся подключённым в фоне. Нажмите, чтобы вернуться.</string>
     <string name="error_connection_failure">Не удалось подключиться к серверу</string>
     <string name="menu_sys_keyboard">Клавиатура</string>

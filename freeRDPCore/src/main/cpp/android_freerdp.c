@@ -970,6 +970,25 @@ out_fail:
 	return ret;
 }
 
+JNIEXPORT jboolean JNICALL
+Java_com_freerdp_freerdpcore_services_LibFreeRDP_freerdp_1send_1suppress_1output(
+    JNIEnv* env, jclass cls, jlong instance, jboolean suppress)
+{
+	freerdp* inst = (freerdp*)instance;
+	ANDROID_EVENT* event = android_event_suppress_output_new(suppress == JNI_TRUE);
+
+	if (!event)
+		return JNI_FALSE;
+
+	if (!android_push_event(inst, event))
+	{
+		android_event_free(event);
+		return JNI_FALSE;
+	}
+
+	return JNI_TRUE;
+}
+
 JNIEXPORT jstring JNICALL
 Java_com_freerdp_freerdpcore_services_LibFreeRDP_freerdp_1get_1jni_1version(JNIEnv* env, jclass cls)
 {
