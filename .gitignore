@@ -21,3 +21,4 @@ bugreport-*.zip
 
 # Kotlin compiler daemon state/logs
 .kotlin/
+dist/
