@@ -200,6 +200,15 @@ static BOOL android_pre_connect(freerdp* instance)
 	if (!freerdp_settings_set_bool(settings, FreeRDP_UnicodeInput, TRUE))
 		return FALSE;
 
+	/* Windows Server 2008 / 2008 R2 (and unpatched 2012) only speak TLS 1.0
+	 * with SHA1 certificates. OpenSSL 3 refuses both at security level >= 1,
+	 * so the handshake fails before NLA. Allow TLS 1.0+ at level 0, like
+	 * mstsc does; newer servers still negotiate TLS 1.2/1.3. */
+	if (!freerdp_settings_set_uint32(settings, FreeRDP_TlsSecLevel, 0))
+		return FALSE;
+	if (!freerdp_settings_set_uint16(settings, FreeRDP_TLSMinVersion, 0x0301))
+		return FALSE;
+
 	rc = PubSub_SubscribeChannelConnected(instance->context->pubSub,
 	                                      android_OnChannelConnectedEventHandler);
 
