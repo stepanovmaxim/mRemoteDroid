@@ -5,6 +5,9 @@
     <string name="menu_mouse_pointer_on">Показать курсор мыши</string>
     <string name="menu_mouse_pointer_off">Скрыть курсор мыши</string>
     <string name="menu_fit_screen">Вписать в экран</string>
+    <string name="menu_rotation_auto">Поворот: авто</string>
+    <string name="menu_rotation_landscape">Поворот: альбомный</string>
+    <string name="menu_rotation_portrait">Поворот: портретный</string>
     <string name="session_connection_lost">Соединение с сервером прервано</string>
     <string name="session_notification_channel">Активный сеанс RDP</string>
     <string name="session_notification_title">Подключено: %1$s</string>

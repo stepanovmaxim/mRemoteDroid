@@ -142,6 +142,36 @@ public class SessionActivity extends AppCompatActivity
 	private boolean imeShown = false;
 	private boolean sessionConnected = false;
 	private boolean disconnectRequested = false;
+
+	// Session screen rotation, chosen in the session menu and remembered.
+	// AUTO follows the orientation sensor even when the system auto-rotate is
+	// locked (SCREEN_ORIENTATION_SENSOR ignores the user's rotation lock).
+	private static final String PREF_ORIENTATION = "orientation_mode";
+	private static final int ORIENT_AUTO = 0;
+	private static final int ORIENT_LANDSCAPE = 1;
+	private static final int ORIENT_PORTRAIT = 2;
+	private int orientationMode = ORIENT_AUTO;
+
+	private void applyOrientationMode()
+	{
+		int requested;
+		if (orientationMode == ORIENT_LANDSCAPE)
+			requested = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE;
+		else if (orientationMode == ORIENT_PORTRAIT)
+			requested = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT;
+		else
+			requested = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR;
+		setRequestedOrientation(requested);
+	}
+
+	private int orientationLabel()
+	{
+		if (orientationMode == ORIENT_LANDSCAPE)
+			return R.string.menu_rotation_landscape;
+		if (orientationMode == ORIENT_PORTRAIT)
+			return R.string.menu_rotation_portrait;
+		return R.string.menu_rotation_auto;
+	}
 	private String sessionTitle;
 
 	/** Android 13+: the keep-alive notification needs permission to be visible. */
@@ -279,6 +309,10 @@ public class SessionActivity extends AppCompatActivity
 		}
 
 		this.setContentView(R.layout.session);
+
+		orientationMode = getSharedPreferences("session_ui", MODE_PRIVATE)
+		                      .getInt(PREF_ORIENTATION, ORIENT_AUTO);
+		applyOrientationMode();
 		if (getSupportActionBar() != null)
 			getSupportActionBar().hide();
 
@@ -625,6 +659,8 @@ public class SessionActivity extends AppCompatActivity
 		                  getString(R.string.menu_sys_keyboard), R.id.session_sys_keyboard);
 		addSessionMenuRow(list, popup, R.drawable.icon_menu_ext_keyboard,
 		                  getString(R.string.menu_ext_keyboard), R.id.session_ext_keyboard);
+		addSessionMenuRow(list, popup, R.drawable.ic_session_rotate, getString(orientationLabel()),
+		                  R.id.session_orientation);
 		addSessionMenuRow(list, popup, R.drawable.ic_session_fit,
 		                  getString(R.string.menu_fit_screen), R.id.session_fit_screen);
 		addSessionMenuRow(list, popup, R.drawable.icon_menu_disconnect,
@@ -1118,6 +1154,17 @@ public class SessionActivity extends AppCompatActivity
 		if (itemId == R.id.session_fit_screen)
 		{
 			fitSessionToScreen();
+		}
+		else if (itemId == R.id.session_orientation)
+		{
+			// auto -> landscape -> portrait -> auto
+			orientationMode = (orientationMode + 1) % 3;
+			getSharedPreferences("session_ui", MODE_PRIVATE)
+			    .edit()
+			    .putInt(PREF_ORIENTATION, orientationMode)
+			    .apply();
+			applyOrientationMode();
+			Toast.makeText(this, orientationLabel(), Toast.LENGTH_SHORT).show();
 		}
 		else if (itemId == R.id.session_touch_pointer)
 		{
