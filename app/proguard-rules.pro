@@ -1,7 +1,6 @@
-# Keep kotlinx.serialization generated serializers
--keepattributes *Annotation*, InnerClasses
--dontnote kotlinx.serialization.**
--keepclassmembers class **$$serializer { *; }
--keepclasseswithmembers class * {
-    kotlinx.serialization.KSerializer serializer(...);
-}
+# App code needs no extra rules: Room, Compose, Navigation and Biometric ship their
+# own consumer rules; FreeRDP's JNI rules come from :freeRDPCore (consumer-rules.pro).
+
+# Keep line numbers so crash reports stay readable.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

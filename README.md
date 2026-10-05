@@ -1,83 +1,68 @@
 # mRemoteDroid
 
-Менеджер RDP-подключений для Android, вдохновлённый [mRemoteNG](https://github.com/mRemoteNG/mRemoteNG).
+Менеджер RDP-подключений для Android в духе [mRemoteNG](https://github.com/mRemoteNG/mRemoteNG) со **встроенным RDP-движком FreeRDP** — сеанс открывается прямо в приложении, без сторонних клиентов.
 
-Приложение — это **менеджер подключений**: оно хранит дерево папок и серверов, шифрует учётные данные и открывает сеанс во **внешнем** RDP-клиенте (Microsoft Remote Desktop или aFreeRDP). Сам RDP-протокол приложение не реализует.
+## Возможности (1.0)
 
-## Возможности (v0.1)
-
-- 🗂️ **Дерево папок и подключений** — вложенные папки, разворачивание/сворачивание, как панель Connections в mRemoteNG.
-- 🔐 **Шифрование учёток** — пароли хранятся в зашифрованном виде (AES-256/GCM, ключ в аппаратном Android Keystore, не покидает устройство).
-- 📥 **Импорт `confCons.xml`** — чтение файла подключений mRemoteNG, включая расшифровку паролей (AES-GCM + PBKDF2-HMAC-SHA1, формат mRemoteNG ≥ 1.76; пароль файла по умолчанию `mR3m`). После импорта пароли сразу перешифровываются ключом устройства.
-- 📤 **Экспорт `confCons.xml`** — выгрузка всего дерева обратно в формат mRemoteNG (пароли шифруются в том же AEAD-формате), для переноса на ПК. Файл читается и этим приложением, и mRemoteNG.
-- 🔎 **Поиск и сортировка** — фильтр по имени/хосту/пользователю и сортировка узлов (A→Я / Я→A).
-- 👆 **Биометрическая защита** — доступ к сохранённым паролям через отпечаток/лицо или PIN устройства (androidx.biometric, Android Keystore). Переключается в меню.
-- 🚀 **Запуск внешнего клиента** — двумя способами:
-  - `.rdp`-файл + `ACTION_VIEW` (понимают и Microsoft RD Client, и aFreeRDP; Android покажет выбор клиента). Пароль в `.rdp` не пишется (MS-клиент принимает только машинно-хешированный), поэтому он копируется в буфер обмена для вставки.
-  - `rdp://user:pass@host:port` — ссылку напрямую понимает aFreeRDP (с паролем).
-
-VNC/SSH сохраняются в модели (чтобы импорт из mRemoteNG не терял данные), но сеанс для них пока не открывается.
+- 🖥️ **Встроенный RDP** (FreeRDP 3.11 + OpenSSL): полноэкранный сеанс, альбомное разрешение по размеру экрана, «вписать в экран» в портрете, pinch-zoom.
+- ✋ **Управление касаниями**: тап — клик, двойной тап — двойной клик, долгий тап — перетаскивание, два пальца — прокрутка / правый клик; режим курсора мыши.
+- ⌨️ **Клавиатура**: Unicode-ввод (кириллица и латиница независимо от раскладки на сервере), Backspace/Enter, панель Esc/Shift/Ctrl/Win/Alt и функциональные клавиши; долгое нажатие на плавающую кнопку — показать/скрыть клавиатуру.
+- 🔘 **Плавающее меню сеанса** (перетаскиваемое): курсор мыши, клавиатура, F-клавиши, вписать в экран, отключиться.
+- 🔋 **Сеанс не рвётся при выключенном экране**: foreground-сервис с уведомлением «Подключено: хост».
+- 🗂️ **Дерево папок и подключений**, поиск и сортировка.
+- 🔐 **Пароли** шифруются AES-256/GCM ключом из Android Keystore; опционально — биометрическая разблокировка.
+- 📥📤 **Импорт и экспорт `confCons.xml`** mRemoteNG (≥1.76, AES-GCM/PBKDF2; дефолтный пароль файла `mR3m`) с расшифровкой/шифрованием паролей.
 
 ## Скриншоты
 
-Проверено на эмуляторе Android 16 (API 36):
-
-| Пустой экран | Форма подключения | Дерево | Диалог запуска |
+| Дерево | Подключение | Сеанс (демо) | Меню сеанса |
 |---|---|---|---|
-| ![empty](docs/01-empty.png) | ![edit](docs/03-edit-filled.png) | ![tree](docs/05-tree.png) | ![launch](docs/06-launch.png) |
+| ![tree](docs/05-tree.png) | ![edit](docs/03-edit-filled.png) | ![session](docs/14-demo-session.png) | ![menu](docs/17-demo-menu.png) |
 
 ## Стек
 
-- Kotlin + Jetpack Compose (Material 3)
-- Room (хранение дерева), DataStore, Navigation Compose
-- Android Keystore для шифрования паролей
-- `minSdk 26`, `targetSdk/compileSdk 35`
+- Kotlin + Jetpack Compose (Material 3), Room, Navigation Compose, androidx.biometric
+- Модуль `:freeRDPCore` — Android-клиент FreeRDP (JNI + экран сеанса), доработан: immersive fullscreen, клавиатура/IME, касания, keep-alive
+- `minSdk 26`, `targetSdk 36`, ABI: `arm64-v8a`, `x86_64`
 
-## Архитектура
+## Структура
 
 ```
-app/src/main/java/com/mremotedroid/app/
-├── MRemoteApp.kt              // Application + service locator (repository)
-├── MainActivity.kt            // Compose + Navigation (tree <-> edit)
-├── data/
-│   ├── model/Protocol.kt      // RDP/VNC/SSH, маппинг из mRemoteNG
-│   ├── db/                    // Room: NodeEntity, NodeDao, AppDatabase
-│   ├── crypto/CredentialCrypto.kt   // AES-GCM через Android Keystore
-│   ├── repo/ConnectionRepository.kt // CRUD + сплющивание дерева в строки
-│   └── importer/MRemoteNgImporter.kt// парсинг + расшифровка confCons.xml
-├── launch/RdpLauncher.kt      // .rdp файл и rdp:// запуск внешнего клиента
-└── ui/
-    ├── theme/Theme.kt
-    ├── tree/                  // ConnectionTreeScreen + TreeViewModel
-    └── edit/                  // EditConnectionScreen + EditViewModel
+app/                         приложение (дерево подключений, импорт/экспорт, настройки)
+  launch/EmbeddedRdpLauncher.kt   запуск сеанса (freerdp:// → SessionActivity)
+freeRDPCore/                 FreeRDP Android client
+  src/main/cpp/              JNI-мост (собирается локально через NDK)
+  src/main/jniLibs/<abi>/    предсобранные libfreerdp3/winpr3/freerdp-client3/ssl/crypto/cjson + include/
+.github/workflows/build-freerdp.yml   сборка нативных библиотек FreeRDP на Linux (Release)
 ```
-
-Дерево хранится одной таблицей `nodes` с самоссылкой `parentId`; `ConnectionRepository.flatten()` превращает его в список видимых строк с учётом свёрнутых папок.
 
 ## Сборка
 
-Проект рассчитан на **Android Studio** (Ladybug или новее).
-
-1. `File → Open` → выберите папку `mRemoteDroid`.
-2. Дождитесь Gradle Sync — Android Studio подтянет зависимости и при необходимости **сгенерирует `gradle/wrapper/gradle-wrapper.jar`** (его нет в репозитории, т.к. это бинарник).
-3. `Run` на эмуляторе или устройстве.
-
-Сборка из командной строки (после того как wrapper jar создан):
+Нужны Android Studio (JBR 17+), Android SDK 36, NDK `27.2.12479018`, CMake `3.22.1`.
 
 ```bash
-./gradlew assembleDebug
+./gradlew assembleRelease
 ```
 
-> Если `./gradlew` жалуется на отсутствие `gradle-wrapper.jar`, выполните один раз `gradle wrapper --gradle-version 8.11.1` (нужен установленный Gradle) либо просто откройте проект в Android Studio.
+Готовые APK — по одному на ABI (`app-arm64-v8a-release.apk` для телефонов) и универсальный.
 
-## Проверка импорта
+**Подпись release**: локальный `keystore.properties` (в git не попадает):
 
-На ПК в mRemoteNG: `Tools → Options` покажет параметры шифрования. Файл по умолчанию — `%AppData%\mRemoteNG\confCons.xml`. Скопируйте его на телефон и в приложении: меню (⋮) → «Импорт confCons.xml». Если файл защищён собственным паролем — введите его вместо `mR3m`.
+```properties
+storeFile=keystore/release.jks
+storePassword=...
+keyAlias=mremotedroid
+keyPassword=...
+```
 
-## Дальнейшие шаги (не в v1)
+Без него release собирается неподписанным. Подпись v2 + v3.
 
-- Встроенный RDP через FreeRDP (NDK) — полноценный сеанс внутри приложения.
-- Перетаскивание узлов, сортировка, поиск.
-- Экспорт обратно в `confCons.xml`.
-- Биометрическая разблокировка хранилища паролей.
-- VNC/SSH-сеансы.
+**Нативные библиотеки FreeRDP** собираются не на Windows, а в GitHub Actions: запустить workflow *Build FreeRDP Android libs*, скачать артефакт `freerdp-jnilibs` и положить `.so` + `include/` в `freeRDPCore/src/main/jniLibs/<abi>/` (`.so` стоит стрипнуть `llvm-strip --strip-debug`).
+
+## Отладка
+
+Debug-сборка умеет открыть демо-сеанс без сервера (весь UI сеанса, ввод пишется в logcat как `LibFreeRDP: demo ...`):
+
+```bash
+adb shell am start -a android.intent.action.VIEW -d freerdp://demo.local -n com.mremotedroid.app/com.freerdp.freerdpcore.presentation.SessionActivity
+```

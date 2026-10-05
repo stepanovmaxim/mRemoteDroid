@@ -67,7 +67,6 @@ import androidx.compose.material3.Button
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.mremotedroid.app.launch.EmbeddedRdpLauncher
-import com.mremotedroid.app.launch.RdpLauncher
 import com.mremotedroid.app.security.BiometricGate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,7 +88,6 @@ fun ConnectionTreeScreen(
     var showFolderDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
-    var launchTarget by remember { mutableStateOf<NodeEntity?>(null) }
     var pendingImport by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     var pendingExportPassword by remember { mutableStateOf<String?>(null) }
     var biometricOn by remember { mutableStateOf(vm.biometricLockEnabled) }
@@ -121,46 +119,25 @@ fun ConnectionTreeScreen(
         }
     }
 
-    fun doLaunch(node: NodeEntity, mode: LaunchMode) {
-        val hasPassword = node.credentialBlob != null
-        val password = vm.passwordFor(node)
-        when (mode) {
-            LaunchMode.EMBEDDED -> {
-                when (val res = EmbeddedRdpLauncher.launch(context, node, password)) {
-                    EmbeddedRdpLauncher.Result.Ok ->
-                        Toast.makeText(context, "Подключение…", Toast.LENGTH_SHORT).show()
-                    is EmbeddedRdpLauncher.Result.Error ->
-                        Toast.makeText(context, res.message, Toast.LENGTH_LONG).show()
-                }
-            }
-            LaunchMode.URI -> reportLaunch(context, RdpLauncher.launchViaUri(context, node, password))
-            LaunchMode.FILE -> {
-                val res = RdpLauncher.launchViaRdpFile(context, node, password)
-                if (res == RdpLauncher.LaunchResult.Ok && hasPassword) {
-                    // The .rdp path can't carry the password to the MS client; it's on the clipboard.
-                    Toast.makeText(
-                        context,
-                        "Пароль скопирован в буфер — вставьте в поле пароля (долгое нажатие → Вставить).",
-                        Toast.LENGTH_LONG
-                    ).show()
-                } else {
-                    reportLaunch(context, res)
-                }
-            }
+    // Sessions always run in the embedded FreeRDP engine.
+    fun connect(node: NodeEntity) {
+        val res = EmbeddedRdpLauncher.launch(context, node, vm.passwordFor(node))
+        if (res is EmbeddedRdpLauncher.Result.Error) {
+            Toast.makeText(context, res.message, Toast.LENGTH_LONG).show()
         }
     }
 
-    fun launchWithGate(node: NodeEntity, mode: LaunchMode) {
+    fun connectWithGate(node: NodeEntity) {
         if (vm.needsUnlock(node) && activity != null) {
             BiometricGate.authenticate(
                 activity = activity,
                 title = "Разблокировка паролей",
                 subtitle = node.name,
-                onSuccess = { vm.markUnlocked(); doLaunch(node, mode) },
+                onSuccess = { vm.markUnlocked(); connect(node) },
                 onFailure = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
             )
         } else {
-            doLaunch(node, mode)
+            connect(node)
         }
     }
 
@@ -262,7 +239,7 @@ fun ConnectionTreeScreen(
                             hasChildren = row.hasChildren,
                             onToggle = { vm.toggleExpand(row.node) },
                             onOpen = {
-                                if (row.node.nodeType == NodeEntity.TYPE_CONNECTION) launchTarget = row.node
+                                if (row.node.nodeType == NodeEntity.TYPE_CONNECTION) connectWithGate(row.node)
                                 else vm.toggleExpand(row.node)
                             },
                             onEdit = { onEditConnection(row.node.id) },
@@ -313,26 +290,6 @@ fun ConnectionTreeScreen(
             onDismiss = { showExportDialog = false }
         )
     }
-
-    launchTarget?.let { node ->
-        LaunchDialog(
-            node = node,
-            installed = RdpLauncher.installedClients(context),
-            onEmbedded = { launchWithGate(node, LaunchMode.EMBEDDED); launchTarget = null },
-            onFile = { launchWithGate(node, LaunchMode.FILE); launchTarget = null },
-            onUri = { launchWithGate(node, LaunchMode.URI); launchTarget = null },
-            onDismiss = { launchTarget = null }
-        )
-    }
-}
-
-private fun reportLaunch(context: android.content.Context, res: RdpLauncher.LaunchResult) {
-    val msg = when (res) {
-        RdpLauncher.LaunchResult.Ok -> "Запуск клиента…"
-        is RdpLauncher.LaunchResult.NoHandler -> res.detail
-        is RdpLauncher.LaunchResult.Error -> res.message
-    }
-    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
 }
 
 @Composable
@@ -504,48 +461,3 @@ private fun PasswordActionDialog(
     )
 }
 
-@Composable
-private fun LaunchDialog(
-    node: NodeEntity,
-    installed: List<Pair<String, String>>,
-    onEmbedded: () -> Unit,
-    onFile: () -> Unit,
-    onUri: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(node.name) },
-        text = {
-            // Scrollable so nothing gets clipped in landscape, where the dialog is short.
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text("${node.hostname}:${node.port}", style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    "Встроенный RDP — сеанс прямо в приложении, с сохранённым паролем.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    "Во внешнем клиенте: .rdp — любой клиент (пароль копируется в буфер), " +
-                        "rdp:// — aFreeRDP (сразу с паролем)." +
-                        if (installed.isNotEmpty()) " Установлены: " + installed.joinToString { it.second } else "",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Row {
-                    TextButton(onClick = onFile) { Text("Открыть (.rdp)") }
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = onUri) { Text("rdp://") }
-                }
-            }
-        },
-        // The primary action sits in the dialog's button row, which is always visible.
-        confirmButton = {
-            Button(onClick = onEmbedded) { Text("Встроенный RDP") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } }
-    )
-}
-
-private enum class LaunchMode { FILE, URI, EMBEDDED }

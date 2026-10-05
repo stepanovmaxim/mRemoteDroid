@@ -9,6 +9,8 @@ android {
 
     defaultConfig {
         minSdk = 26
+        // JNI keep rules, applied when the app is minified with R8
+        consumerProguardFiles("consumer-rules.pro")
 
         // We only ship prebuilt FreeRDP core libs for these ABIs, so only build
         // the JNI glue for them.
