@@ -25,8 +25,8 @@ android {
         applicationId = "com.mremotedroid.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.1.0"
+        versionCode = 7
+        versionName = "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -71,7 +71,9 @@ android {
     // native FreeRDP libs (the universal APK bundles both and is ~2x larger).
     splits {
         abi {
-            isEnable = true
+            // Per-ABI APKs for direct installs. An app bundle (Google Play) splits by
+            // ABI itself and refuses multi-APK output, so turn this off for bundle builds.
+            isEnable = gradle.startParameter.taskNames.none { it.contains("bundle", ignoreCase = true) }
             reset()
             include("arm64-v8a", "x86_64")
             isUniversalApk = true

@@ -996,6 +996,11 @@ public class SessionActivity extends AppCompatActivity
 		session.setUIEventListener(this);
 		// name the Recents card after the connection
 		setTaskDescription(new ActivityManager.TaskDescription(title));
+		// Start the keep-alive service now, while this window is in the foreground:
+		// Android forbids starting it from the background, so waiting for the connect
+		// to finish would leave the session unprotected if the user switched away.
+		SessionKeepAliveService.start(this, session.getInstance(), title != null ? title : "",
+		                              getIntent().getDataString());
 
 		progressDialog = new ProgressDialog(this);
 		progressDialog.setTitle(title);
@@ -2021,10 +2026,7 @@ public class SessionActivity extends AppCompatActivity
 		{
 			Log.v(TAG, "OnConnectionSuccess");
 			sessionConnected = true;
-			// keep the connection alive when the screen goes off / app goes background
-			SessionKeepAliveService.start(SessionActivity.this, session.getInstance(),
-			                              sessionTitle != null ? sessionTitle : "",
-			                              getIntent().getDataString());
+			// (the keep-alive service was started with the connect attempt)
 			requestNotificationPermissionOnce();
 
 			// bind session
