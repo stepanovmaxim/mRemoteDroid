@@ -76,6 +76,8 @@ target_link_libraries(
   -lcrypto
   -lcjson
   -Wl,--allow-shlib-undefined
+  # 16 KB page size support (Google Play requirement for Android 15+ targets)
+  -Wl,-z,max-page-size=16384
   ${log-lib}
   ${dl-lib}
   ${jnigraphics-lib}

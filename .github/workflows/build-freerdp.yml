@@ -19,7 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      NDK_VERSION: "27.2.12479018"
+      # r28+ links 16 KB-aligned ELF segments by default (Google Play requires
+      # 16 KB page size support for apps targeting Android 15+).
+      NDK_VERSION: "28.2.13676358"
       CMAKE_VERSION: "3.22.1"
     steps:
       - name: Install host build tools
@@ -69,6 +71,8 @@ jobs:
           # OpenSSL 3.4's android config locates its toolchain via ANDROID_NDK_ROOT/HOME.
           export ANDROID_NDK_ROOT="$ANDROID_NDK"
           export ANDROID_NDK_HOME="$ANDROID_NDK"
+          # belt and braces for deps built outside CMake (OpenSSL's Configure)
+          export LDFLAGS="-Wl,-z,max-page-size=16384 ${LDFLAGS:-}"
           export ANDROID_SDK="$ANDROID_HOME"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export CMAKE_PROGRAM="$ANDROID_HOME/cmake/${CMAKE_VERSION}/bin/cmake"
@@ -82,6 +86,19 @@ jobs:
         if: always()
         run: |
           find client/Android/Studio/freeRDPCore/src/main/jniLibs -name '*.so' -printf '%p  %s bytes\n' 2>/dev/null | sort || echo "no libs"
+
+      - name: Verify 16 KB page alignment
+        working-directory: FreeRDP
+        run: |
+          READELF="$ANDROID_HOME/ndk/${NDK_VERSION}/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          bad=0
+          for f in $(find client/Android/Studio/freeRDPCore/src/main/jniLibs -name '*.so'); do
+            for a in $("$READELF" -lW "$f" | awk '/LOAD/{print $NF}'); do
+              if [ $((a)) -lt 16384 ]; then echo "NOT 16KB aligned: $f ($a)"; bad=1; fi
+            done
+          done
+          [ $bad -eq 0 ] && echo "all libraries 16 KB aligned"
+          exit $bad
 
       - name: Upload jniLibs artifact
         uses: actions/upload-artifact@v4
