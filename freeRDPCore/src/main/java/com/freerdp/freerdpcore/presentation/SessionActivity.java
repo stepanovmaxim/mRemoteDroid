@@ -479,22 +479,63 @@ public class SessionActivity extends AppCompatActivity
 		return debuggable && "demo.local".equals(uri.getHost());
 	}
 
+	/** Generic placeholder desktop (gradient, two windows, a taskbar) for the demo session. */
+	private static void drawDemoDesktop(Canvas canvas, int w, int h)
+	{
+		Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+		p.setShader(new android.graphics.LinearGradient(0, 0, w, h, 0xFF0D2B5E, 0xFF1F6FB2,
+		                                                 android.graphics.Shader.TileMode.CLAMP));
+		canvas.drawRect(0, 0, w, h, p);
+		p.setShader(null);
+
+		float bar = h * 0.06f;
+		p.setColor(0xE6101820);
+		canvas.drawRect(0, h - bar, w, h, p);
+		p.setColor(0xFF4FA3E0);
+		canvas.drawRoundRect(bar * 0.3f, h - bar * 0.8f, bar * 0.9f, h - bar * 0.2f, 6, 6, p);
+		p.setColor(0x66FFFFFF);
+		for (int i = 0; i < 4; i++)
+		{
+			float x = bar * (1.4f + i * 0.9f);
+			canvas.drawRoundRect(x, h - bar * 0.75f, x + bar * 0.5f, h - bar * 0.25f, 5, 5, p);
+		}
+
+		drawDemoWindow(canvas, p, w * 0.08f, h * 0.10f, w * 0.52f, h * 0.70f, "Server status");
+		drawDemoWindow(canvas, p, w * 0.45f, h * 0.22f, w * 0.92f, h * 0.84f, "Event log");
+	}
+
+	private static void drawDemoWindow(Canvas c, Paint p, float l, float t, float r, float b,
+	                                   String title)
+	{
+		float title_h = (b - t) * 0.09f;
+		p.setColor(0x55000000);
+		c.drawRoundRect(l + 8, t + 10, r + 8, b + 10, 14, 14, p);
+		p.setColor(0xFFF4F6F9);
+		c.drawRoundRect(l, t, r, b, 14, 14, p);
+		p.setColor(0xFF2B3A4A);
+		c.drawRoundRect(l, t, r, t + title_h, 14, 14, p);
+		c.drawRect(l, t + title_h / 2, r, t + title_h, p);
+		p.setColor(Color.WHITE);
+		p.setTextSize(title_h * 0.5f);
+		c.drawText(title, l + title_h * 0.4f, t + title_h * 0.68f, p);
+		float y = t + title_h * 1.8f;
+		int i = 0;
+		while (y < b - title_h * 0.6f)
+		{
+			p.setColor(i % 5 == 0 ? 0xFF3C8DD6 : 0xFFCDD5DF);
+			float len = (r - l) * (0.35f + 0.45f * ((i * 37) % 10) / 10f);
+			c.drawRoundRect(l + title_h * 0.4f, y, l + title_h * 0.4f + len, y + title_h * 0.28f,
+			                4, 4, p);
+			y += title_h * 0.62f;
+			i++;
+		}
+	}
+
 	private void startDemoSession(Uri uri)
 	{
 		int[] size = landscapeSessionSize();
 		bitmap = Bitmap.createBitmap(size[0], size[1], Config.ARGB_8888);
-		Canvas canvas = new Canvas(bitmap);
-		canvas.drawColor(0xFF0B3D91);
-		Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-		paint.setColor(0x33FFFFFF);
-		for (int x = 0; x < size[0]; x += 100)
-			canvas.drawLine(x, 0, x, size[1], paint);
-		for (int y = 0; y < size[1]; y += 100)
-			canvas.drawLine(0, y, size[0], y, paint);
-		paint.setColor(Color.WHITE);
-		paint.setTextSize(size[1] / 12f);
-		canvas.drawText("mRemoteDroid demo " + size[0] + "x" + size[1], size[0] / 20f,
-		                size[1] / 2f, paint);
+		drawDemoDesktop(new Canvas(bitmap), size[0], size[1]);
 
 		session = new SessionState(0, uri);
 		session.setSurface(new BitmapDrawable(getResources(), bitmap));

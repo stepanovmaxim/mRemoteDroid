@@ -47,6 +47,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // installs next to the release build, so testing never touches real data
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             // R8: shrink/optimize code and drop unused resources (icons etc.)
             isMinifyEnabled = true

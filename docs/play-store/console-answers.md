@@ -62,8 +62,8 @@
 Приложения → **Инструменты (Tools)** или **Бизнес (Business)**. Теги: Remote desktop, Productivity.
 
 ## Контакты
-Email разработчика — обязателен и будет виден в Google Play. Укажите отдельный ящик, если
-не хотите светить личный. Сайт — https://github.com/stepanovmaxim/mRemoteDroid
+Email разработчика (виден в Google Play): **i@stepanovmaxim.ru**.
+Сайт: https://github.com/stepanovmaxim/mRemoteDroid
 
 ## Графика
 - Значок 512×512 PNG (32-бит, без прозрачности по краям не обязательно).

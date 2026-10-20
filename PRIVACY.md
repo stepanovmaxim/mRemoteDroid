@@ -26,7 +26,7 @@ mRemoteDroid is a remote desktop (RDP) connection manager. It is developed as an
 
 **Children.** The app is not directed at children.
 
-**Changes and contact.** Changes to this policy are published in this file. Questions: <https://github.com/stepanovmaxim/mRemoteDroid/issues>
+**Changes and contact.** Changes to this policy are published in this file. Questions: <i@stepanovmaxim.ru>, <https://github.com/stepanovmaxim/mRemoteDroid/issues>
 
 ---
 
@@ -50,7 +50,7 @@ mRemoteDroid — менеджер подключений к удалённому
 
 **Дети.** Приложение не предназначено для детей.
 
-**Изменения и контакты.** Изменения политики публикуются в этом файле. Вопросы: <https://github.com/stepanovmaxim/mRemoteDroid/issues>
+**Изменения и контакты.** Изменения политики публикуются в этом файле. Вопросы: <i@stepanovmaxim.ru>, <https://github.com/stepanovmaxim/mRemoteDroid/issues>
 
 ---
 
@@ -74,7 +74,7 @@ mRemoteDroid ist ein Verbindungsmanager für Remotedesktop (RDP). Es ist ein Ope
 
 **Kinder.** Die App richtet sich nicht an Kinder.
 
-**Änderungen und Kontakt.** Änderungen werden in dieser Datei veröffentlicht. Fragen: <https://github.com/stepanovmaxim/mRemoteDroid/issues>
+**Änderungen und Kontakt.** Änderungen werden in dieser Datei veröffentlicht. Fragen: <i@stepanovmaxim.ru>, <https://github.com/stepanovmaxim/mRemoteDroid/issues>
 
 ---
 
@@ -98,7 +98,7 @@ mRemoteDroid es un gestor de conexiones de escritorio remoto (RDP). Es un proyec
 
 **Menores.** La aplicación no está dirigida a menores.
 
-**Cambios y contacto.** Los cambios se publican en este archivo. Preguntas: <https://github.com/stepanovmaxim/mRemoteDroid/issues>
+**Cambios y contacto.** Los cambios se publican en este archivo. Preguntas: <i@stepanovmaxim.ru>, <https://github.com/stepanovmaxim/mRemoteDroid/issues>
 
 ---
 
@@ -122,7 +122,7 @@ mRemoteDroid est un gestionnaire de connexions Bureau à distance (RDP). C'est u
 
 **Enfants.** L'application ne s'adresse pas aux enfants.
 
-**Modifications et contact.** Les modifications sont publiées dans ce fichier. Questions : <https://github.com/stepanovmaxim/mRemoteDroid/issues>
+**Modifications et contact.** Les modifications sont publiées dans ce fichier. Questions : <i@stepanovmaxim.ru>, <https://github.com/stepanovmaxim/mRemoteDroid/issues>
 
 ---
 
@@ -146,7 +146,7 @@ mRemoteDroid è un gestore di connessioni Desktop remoto (RDP). È un progetto o
 
 **Minori.** L'app non è destinata ai minori.
 
-**Modifiche e contatti.** Le modifiche vengono pubblicate in questo file. Domande: <https://github.com/stepanovmaxim/mRemoteDroid/issues>
+**Modifiche e contatti.** Le modifiche vengono pubblicate in questo file. Domande: <i@stepanovmaxim.ru>, <https://github.com/stepanovmaxim/mRemoteDroid/issues>
 
 ---
 
@@ -170,4 +170,4 @@ mRemoteDroid 是一款远程桌面 (RDP) 连接管理器。它是开源项目，
 
 **儿童。** 本应用不面向儿童。
 
-**变更与联系。** 本政策的变更会发布在此文件中。问题反馈：<https://github.com/stepanovmaxim/mRemoteDroid/issues>
+**变更与联系。** 本政策的变更会发布在此文件中。问题反馈：<i@stepanovmaxim.ru>, <https://github.com/stepanovmaxim/mRemoteDroid/issues>
