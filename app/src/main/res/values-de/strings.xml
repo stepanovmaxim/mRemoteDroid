@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Abbrechen</string>
+    <string name="action_delete">Löschen</string>
+    <string name="action_back">Zurück</string>
+    <string name="action_save">Speichern</string>
+    <string name="action_close">Schließen</string>
+    <string name="action_edit">Bearbeiten</string>
+    <string name="action_add_here">Hier hinzufügen</string>
+
+    <string name="crash_title">Die App wurde unerwartet beendet</string>
+    <string name="crash_message">Senden Sie den Fehlerbericht an den Entwickler, damit die Ursache gefunden und behoben werden kann. Passwörter sind niemals im Bericht enthalten.</string>
+    <string name="crash_send">Bericht senden</string>
+    <string name="crash_copy">Kopieren</string>
+    <string name="crash_copied">Bericht kopiert</string>
+
+    <string name="edit_title_new">Neue Verbindung</string>
+    <string name="edit_title_edit">Verbindung bearbeiten</string>
+    <string name="field_name">Name</string>
+    <string name="field_host">Host / IP</string>
+    <string name="field_port">Port</string>
+    <string name="field_user">Benutzername</string>
+    <string name="field_domain">Domäne</string>
+    <string name="field_password">Passwort</string>
+    <string name="field_password_stored">Passwort (gespeichert, zum Beibehalten leer lassen)</string>
+    <string name="field_fullscreen">Vollbild</string>
+    <string name="field_console">Konsolensitzung (/admin)</string>
+    <string name="field_gateway">RD-Gateway (optional)</string>
+    <string name="field_description">Beschreibung</string>
+    <string name="edit_rdp_only_hint">Derzeit können nur RDP-Verbindungen geöffnet werden. VNC/SSH-Einstellungen werden gespeichert, aber es wird keine Sitzung gestartet.</string>
+    <string name="default_connection_name">Neue Verbindung</string>
+
+    <string name="unlock_title">Passwörter entsperren</string>
+    <string name="cd_sort">Sortieren</string>
+    <string name="cd_menu">Menü</string>
+    <string name="cd_actions">Aktionen</string>
+    <string name="cd_add_connection">Verbindung hinzufügen</string>
+    <string name="cd_clear">Löschen</string>
+    <string name="menu_new_folder">Neuer Ordner</string>
+    <string name="menu_import">confCons.xml importieren</string>
+    <string name="menu_export">confCons.xml exportieren</string>
+    <string name="menu_biometric">Biometrische Sperre</string>
+    <string name="menu_about">Über</string>
+    <string name="search_hint">Nach Name, Host, Benutzer suchen</string>
+    <string name="empty_list">Noch keine Verbindungen.\nFügen Sie eine mit + hinzu oder importieren Sie eine confCons.xml-Datei.</string>
+    <string name="nothing_found">Nichts gefunden.</string>
+    <string name="session_open_hint">Sitzung geöffnet, zum Zurückkehren tippen</string>
+    <string name="sort_name_asc">Name A→Z</string>
+    <string name="sort_name_desc">Name Z→A</string>
+    <string name="delete_title">Löschen?</string>
+    <string name="delete_folder_message">Der Ordner „%1$s“ und sein gesamter Inhalt werden gelöscht.</string>
+    <string name="delete_connection_message">Die Verbindung „%1$s“ wird gelöscht.</string>
+
+    <string name="import_title">confCons.xml importieren</string>
+    <string name="import_hint">Passwort der mRemoteNG-Datei. Behalten Sie den Standardwert „mR3m“ bei, wenn die Datei nicht passwortgeschützt ist.</string>
+    <string name="import_choose_file">Datei auswählen</string>
+    <string name="import_replace">Aktuelle Liste ersetzen</string>
+    <string name="export_title">confCons.xml exportieren</string>
+    <string name="export_hint">Passwort zum Verschlüsseln der Datei. „mR3m“ bedeutet eine ungeschützte Datei, die mRemoteNG ohne Passwortabfrage öffnet.</string>
+    <string name="export_save_file">Datei speichern</string>
+    <string name="file_password">Dateipasswort</string>
+    <string name="msg_import_error">Import fehlgeschlagen: %1$s</string>
+    <string name="msg_import_done">Importierte Verbindungen: %1$d, Ordner: %2$d.</string>
+    <string name="msg_import_passwords">Entschlüsselte Passwörter: %1$d.</string>
+    <string name="msg_import_passwords_failed">Nicht entschlüsselbare Passwörter: %1$d.</string>
+    <string name="msg_import_password_hint">Wenn für die Datei in mRemoteNG ein Passwort festgelegt ist, importieren Sie sie erneut und geben Sie dieses Passwort statt mR3m ein.</string>
+    <string name="msg_export_done">Nach confCons.xml exportiert.</string>
+    <string name="msg_export_error">Export fehlgeschlagen: %1$s</string>
+
+    <string name="msg_max_sessions">Es können höchstens %1$d Sitzungen gleichzeitig geöffnet sein. Schließen Sie zuerst eine davon.</string>
+    <string name="msg_launch_failed">Die Sitzung konnte nicht gestartet werden.</string>
+
+    <string name="about_title">Über</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_tagline">Verbindungsmanager für Remotedesktop (RDP) mit integrierter FreeRDP-Engine.</string>
+    <string name="about_source">Quellcode</string>
+    <string name="about_privacy">Datenschutzerklärung</string>
+    <string name="about_licenses">Open-Source-Lizenzen</string>
+    <string name="about_tap_license">Tippen, um den Lizenztext ein- oder auszublenden.</string>
+    <string name="about_disclaimer">mRemoteDroid ist ein unabhängiges Projekt. Es steht in keiner Verbindung zum mRemoteNG-Projekt und wird von diesem nicht unterstützt. Import und Export verwenden das Dateiformat confCons.xml von mRemoteNG ausschließlich zur Kompatibilität.</string>
+    <string name="about_mpl_note">Der in dieser App verwendete Code des FreeRDP-Android-Clients wurde geändert. Sein Quellcode ist, wie der Quellcode der gesamten App, im Repository verfügbar.</string>
+</resources>

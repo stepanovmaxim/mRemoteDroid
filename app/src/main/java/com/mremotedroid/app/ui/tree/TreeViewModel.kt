@@ -1,5 +1,7 @@
 package com.mremotedroid.app.ui.tree
 
+import com.mremotedroid.app.R
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -19,9 +21,22 @@ import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.io.OutputStream
 
-enum class SortMode(val label: String) {
-    NAME_ASC("Имя A→Я"),
-    NAME_DESC("Имя Я→A")
+enum class SortMode(@StringRes val labelRes: Int) {
+    NAME_ASC(R.string.sort_name_asc),
+    NAME_DESC(R.string.sort_name_desc)
+}
+
+/** One-shot result messages; the screen turns them into localized text. */
+sealed interface TreeMessage {
+    data class ImportError(val detail: String?) : TreeMessage
+    data class Imported(
+        val connections: Int,
+        val folders: Int,
+        val passwordsDecrypted: Int,
+        val passwordsFailed: Int
+    ) : TreeMessage
+    data object Exported : TreeMessage
+    data class ExportError(val detail: String?) : TreeMessage
 }
 
 class TreeViewModel(
@@ -43,8 +58,8 @@ class TreeViewModel(
             computeRows(nodes, q, sort)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _message = MutableStateFlow<String?>(null)
-    val message: StateFlow<String?> = _message
+    private val _message = MutableStateFlow<TreeMessage?>(null)
+    val message: StateFlow<TreeMessage?> = _message
 
     val biometricLockEnabled: Boolean get() = settings.biometricLock
 
@@ -74,21 +89,13 @@ class TreeViewModel(
         val result = runCatching {
             input.use { MRemoteNgImporter.parse(it, filePassword.ifBlank { "mR3m" }) }
         }.getOrElse {
-            _message.value = "Ошибка импорта: ${it.message}"
+            _message.value = TreeMessage.ImportError(it.message)
             return@launch
         }
         if (replace) repo.replaceAll(result.nodes) else repo.addAll(result.nodes)
-        _message.value = buildString {
-            append("Импортировано: ${result.connections} подключений, ${result.folders} папок.")
-            if (result.passwordsDecrypted + result.passwordsFailed > 0) {
-                append(" Пароли: ${result.passwordsDecrypted} ок")
-                if (result.passwordsFailed > 0) append(", ${result.passwordsFailed} не удалось")
-                append(".")
-                if (result.passwordsFailed > 0 && result.passwordsDecrypted == 0) {
-                    append(" Если в mRemoteNG задан пароль файла — повторите импорт, введя его вместо mR3m.")
-                }
-            }
-        }
+        _message.value = TreeMessage.Imported(
+            result.connections, result.folders, result.passwordsDecrypted, result.passwordsFailed
+        )
     }
 
     fun export(filePassword: String, output: OutputStream) = viewModelScope.launch {
@@ -98,9 +105,9 @@ class TreeViewModel(
                 output.use { it.write(xml.toByteArray(Charsets.UTF_8)) }
             }
         }.onSuccess {
-            _message.value = "Экспортировано в confCons.xml."
+            _message.value = TreeMessage.Exported
         }.onFailure {
-            _message.value = "Ошибка экспорта: ${it.message}"
+            _message.value = TreeMessage.ExportError(it.message)
         }
     }
 

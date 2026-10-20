@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_back">Назад</string>
+    <string name="action_save">Сохранить</string>
+    <string name="action_close">Закрыть</string>
+    <string name="action_edit">Изменить</string>
+    <string name="action_add_here">Добавить сюда</string>
+
+    <string name="crash_title">Приложение аварийно закрылось</string>
+    <string name="crash_message">Отправьте отчёт об ошибке разработчику — по нему можно найти и исправить причину. Пароли в отчёт не попадают.</string>
+    <string name="crash_send">Отправить отчёт</string>
+    <string name="crash_copy">Скопировать</string>
+    <string name="crash_copied">Отчёт скопирован</string>
+
+    <string name="edit_title_new">Новое подключение</string>
+    <string name="edit_title_edit">Изменить подключение</string>
+    <string name="field_name">Название</string>
+    <string name="field_host">Хост / IP</string>
+    <string name="field_port">Порт</string>
+    <string name="field_user">Пользователь</string>
+    <string name="field_domain">Домен</string>
+    <string name="field_password">Пароль</string>
+    <string name="field_password_stored">Пароль (сохранён — оставьте пустым)</string>
+    <string name="field_fullscreen">Полноэкранный режим</string>
+    <string name="field_console">Консольная сессия (/admin)</string>
+    <string name="field_gateway">RD Gateway (необязательно)</string>
+    <string name="field_description">Описание</string>
+    <string name="edit_rdp_only_hint">Запуск сейчас поддерживается только для RDP; настройки VNC/SSH сохраняются, но сеанс не открывается.</string>
+    <string name="default_connection_name">Новое подключение</string>
+
+    <string name="unlock_title">Разблокировка паролей</string>
+    <string name="cd_sort">Сортировка</string>
+    <string name="cd_menu">Меню</string>
+    <string name="cd_actions">Действия</string>
+    <string name="cd_add_connection">Добавить подключение</string>
+    <string name="cd_clear">Очистить</string>
+    <string name="menu_new_folder">Новая папка</string>
+    <string name="menu_import">Импорт confCons.xml</string>
+    <string name="menu_export">Экспорт confCons.xml</string>
+    <string name="menu_biometric">Биометрическая защита</string>
+    <string name="menu_about">О приложении</string>
+    <string name="search_hint">Поиск по имени, хосту, пользователю</string>
+    <string name="empty_list">Нет подключений.\nДобавьте через + или импортируйте confCons.xml.</string>
+    <string name="nothing_found">Ничего не найдено.</string>
+    <string name="session_open_hint">Сеанс открыт — нажмите, чтобы вернуться</string>
+    <string name="sort_name_asc">Имя А→Я</string>
+    <string name="sort_name_desc">Имя Я→А</string>
+    <string name="delete_title">Удалить?</string>
+    <string name="delete_folder_message">Папка «%1$s» и всё её содержимое будут удалены.</string>
+    <string name="delete_connection_message">Подключение «%1$s» будет удалено.</string>
+
+    <string name="import_title">Импорт confCons.xml</string>
+    <string name="import_hint">Пароль файла mRemoteNG. По умолчанию «mR3m», если файл не защищён паролем.</string>
+    <string name="import_choose_file">Выбрать файл</string>
+    <string name="import_replace">Заменить текущий список</string>
+    <string name="export_title">Экспорт confCons.xml</string>
+    <string name="export_hint">Пароль для шифрования файла. «mR3m» — незащищённый файл (mRemoteNG откроет его без запроса пароля).</string>
+    <string name="export_save_file">Сохранить файл</string>
+    <string name="file_password">Пароль файла</string>
+    <string name="msg_import_error">Ошибка импорта: %1$s</string>
+    <string name="msg_import_done">Импортировано подключений: %1$d, папок: %2$d.</string>
+    <string name="msg_import_passwords">Расшифровано паролей: %1$d.</string>
+    <string name="msg_import_passwords_failed">Не удалось расшифровать паролей: %1$d.</string>
+    <string name="msg_import_password_hint">Если в mRemoteNG задан пароль файла — повторите импорт, введя его вместо mR3m.</string>
+    <string name="msg_export_done">Экспортировано в confCons.xml.</string>
+    <string name="msg_export_error">Ошибка экспорта: %1$s</string>
+
+    <string name="msg_max_sessions">Одновременно можно открыть не больше %1$d сеансов. Сначала закройте один из них.</string>
+    <string name="msg_launch_failed">Не удалось запустить сеанс.</string>
+
+    <string name="about_title">О приложении</string>
+    <string name="about_version">Версия %1$s</string>
+    <string name="about_tagline">Менеджер подключений к удалённому рабочему столу (RDP) со встроенным движком FreeRDP.</string>
+    <string name="about_source">Исходный код</string>
+    <string name="about_privacy">Политика конфиденциальности</string>
+    <string name="about_licenses">Лицензии открытого ПО</string>
+    <string name="about_tap_license">Нажмите, чтобы показать или скрыть текст лицензии.</string>
+    <string name="about_disclaimer">mRemoteDroid — независимый проект, не связанный с проектом mRemoteNG и не одобренный им. Импорт и экспорт используют формат файла confCons.xml программы mRemoteNG только для совместимости.</string>
+    <string name="about_mpl_note">Код Android-клиента FreeRDP в приложении изменён. Его исходный код, как и код всего приложения, доступен в репозитории.</string>
+</resources>

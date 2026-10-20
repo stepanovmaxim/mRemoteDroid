@@ -19,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.mremotedroid.app.data.repo.ConnectionRepository
 import com.mremotedroid.app.data.settings.AppSettings
+import com.mremotedroid.app.ui.about.AboutScreen
 import com.mremotedroid.app.ui.edit.EditConnectionScreen
 import com.mremotedroid.app.ui.edit.EditViewModel
 import com.mremotedroid.app.ui.theme.MRemoteTheme
@@ -36,8 +37,8 @@ class MainActivity : FragmentActivity() {
         // with saved state. Each report file is deleted once offered, so no repeats.
         offerReport(
             MRemoteApp.CRASH_FILE,
-            "Приложение аварийно закрылось",
-            "Отправьте отчёт об ошибке разработчику — по нему можно найти и исправить причину. Пароли в отчёт не попадают.",
+            getString(R.string.crash_title),
+            getString(R.string.crash_message),
             "mRemoteDroid crash report"
         )
         // session logs are no longer collected; drop one left by an older version
@@ -55,20 +56,20 @@ class MainActivity : FragmentActivity() {
         AlertDialog.Builder(this)
             .setTitle(title)
             .setMessage(message)
-            .setPositiveButton("Отправить отчёт") { _, _ ->
+            .setPositiveButton(R.string.crash_send) { _, _ ->
                 val send = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_SUBJECT, subject)
                     putExtra(Intent.EXTRA_TEXT, report)
                 }
-                startActivity(Intent.createChooser(send, "Отправить отчёт"))
+                startActivity(Intent.createChooser(send, getString(R.string.crash_send)))
             }
-            .setNeutralButton("Скопировать") { _, _ ->
+            .setNeutralButton(R.string.crash_copy) { _, _ ->
                 val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
                 cm.setPrimaryClip(ClipData.newPlainText(subject, report))
-                Toast.makeText(this, "Отчёт скопирован", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.crash_copied, Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Закрыть", null)
+            .setNegativeButton(R.string.action_close, null)
             .show()
         return true
     }
@@ -88,8 +89,12 @@ private fun AppNav(repo: ConnectionRepository, settings: AppSettings) {
                 },
                 onEditConnection = { nodeId ->
                     nav.navigate("edit?nodeId=$nodeId")
-                }
+                },
+                onAbout = { nav.navigate("about") }
             )
+        }
+        composable("about") {
+            AboutScreen(onBack = { nav.popBackStack() })
         }
         composable(
             route = "edit?nodeId={nodeId}&parentId={parentId}",

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- mRemoteDroid: session screen strings missing from the upstream FreeRDP translation -->
+<resources>
+    <string name="cancel">Annulla</string>
+    <string name="yes">Sì</string>
+    <string name="no">No</string>
+    <string name="dlg_dont_show_again">Non chiedere più</string>
+    <string name="dlg_msg_connecting">Connessione in corso…</string>
+    <string name="dlg_msg_verify_certificate">Impossibile verificare l\'identità del computer remoto. Vuoi connetterti comunque?</string>
+    <string name="dlg_title_credentials">Inserisci le tue credenziali</string>
+    <string name="dlg_title_verify_certificate">Verifica certificato</string>
+    <string name="error_connection_failure">Impossibile stabilire la connessione con il server.</string>
+    <string name="info_capabilities_changed">Le impostazioni dello schermo sono state sostituite con quelle supportate dal server.</string>
+    <string name="menu_disconnect">Disconnetti</string>
+    <string name="menu_ext_keyboard">Tasti funzione</string>
+    <string name="menu_sys_keyboard">Tastiera</string>
+    <string name="menu_fit_screen">Adatta allo schermo</string>
+    <string name="menu_mouse_pointer_on">Mostra puntatore del mouse</string>
+    <string name="menu_mouse_pointer_off">Nascondi puntatore del mouse</string>
+    <string name="menu_rotation_auto">Rotazione: automatica</string>
+    <string name="menu_rotation_landscape">Rotazione: orizzontale</string>
+    <string name="menu_rotation_portrait">Rotazione: verticale</string>
+    <string name="menu_to_list">Elenco connessioni</string>
+    <string name="session_menu">Menu della sessione</string>
+    <string name="session_connection_lost">La connessione al server è stata persa</string>
+    <string name="session_notification_channel">Sessione RDP attiva</string>
+    <string name="session_notification_title">Connesso: %1$s</string>
+    <string name="session_notification_title_many">Sessioni aperte: %1$d</string>
+    <string name="session_notification_text">La sessione resta connessa in background. Tocca per tornare.</string>
+    <string name="settings_domain">Dominio</string>
+    <string name="settings_password">Password</string>
+    <string name="settings_username">Nome utente</string>
+</resources>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- mRemoteDroid: session screen strings missing from the upstream FreeRDP translation -->
+<resources>
+    <string name="menu_fit_screen">Ajustar a la pantalla</string>
+    <string name="menu_mouse_pointer_on">Mostrar puntero del ratón</string>
+    <string name="menu_mouse_pointer_off">Ocultar puntero del ratón</string>
+    <string name="menu_rotation_auto">Rotación: automática</string>
+    <string name="menu_rotation_landscape">Rotación: horizontal</string>
+    <string name="menu_rotation_portrait">Rotación: vertical</string>
+    <string name="menu_to_list">Lista de conexiones</string>
+    <string name="session_menu">Menú de la sesión</string>
+    <string name="session_connection_lost">Se perdió la conexión con el servidor</string>
+    <string name="session_notification_channel">Sesión RDP activa</string>
+    <string name="session_notification_title">Conectado: %1$s</string>
+    <string name="session_notification_title_many">Sesiones abiertas: %1$d</string>
+    <string name="session_notification_text">La sesión sigue conectada en segundo plano. Toca para volver.</string>
+</resources>

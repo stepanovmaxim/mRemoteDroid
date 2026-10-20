@@ -25,8 +25,8 @@ android {
         applicationId = "com.mremotedroid.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.1.1"
+        versionCode = 8
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -69,6 +69,14 @@ android {
     }
     // Split the APK per ABI so each download only carries one architecture's
     // native FreeRDP libs (the universal APK bundles both and is ~2x larger).
+    androidResources {
+        // UI languages: English (default), Russian, German, Spanish, French, Italian,
+        // Chinese. Drops other locales pulled in by libraries so the UI is never
+        // half-translated; Android 13+ also lists these in the per-app language setting.
+        localeFilters += listOf("en", "ru", "de", "es", "fr", "it", "zh")
+        generateLocaleConfig = true
+    }
+
     splits {
         abi {
             // Per-ABI APKs for direct installs. An app bundle (Google Play) splits by

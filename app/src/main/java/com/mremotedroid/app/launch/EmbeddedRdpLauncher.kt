@@ -1,5 +1,6 @@
 package com.mremotedroid.app.launch
 
+import com.mremotedroid.app.R
 import android.content.Context
 import android.net.Uri
 import com.freerdp.freerdpcore.application.GlobalApp
@@ -32,7 +33,7 @@ object EmbeddedRdpLauncher {
     fun launch(context: Context, node: NodeEntity, plainPassword: String?): Result {
         if (reopen(context, node)) return Result.Ok
         if (ActiveSessions.count() >= GlobalApp.MAX_SESSIONS) {
-            return Result.Error("Открыто максимум ${GlobalApp.MAX_SESSIONS} сеансов. Закройте один из них.")
+            return Result.Error(context.getString(R.string.msg_max_sessions, GlobalApp.MAX_SESSIONS))
         }
         return try {
             // No explicit size: SessionActivity picks a landscape resolution matching
@@ -65,7 +66,7 @@ object EmbeddedRdpLauncher {
             )
             Result.Ok
         } catch (e: Exception) {
-            Result.Error(e.message ?: "Не удалось запустить встроенный сеанс")
+            Result.Error(context.getString(R.string.msg_launch_failed))
         }
     }
 

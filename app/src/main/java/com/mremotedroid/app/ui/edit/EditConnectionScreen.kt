@@ -1,5 +1,7 @@
 package com.mremotedroid.app.ui.edit
 
+import com.mremotedroid.app.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,14 +40,15 @@ fun EditConnectionScreen(
     onBack: () -> Unit
 ) {
     val s by vm.state.collectAsStateWithLifecycle()
+    val defaultName = stringResource(R.string.default_connection_name)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (s.isNew) "Новое подключение" else "Изменить подключение") },
+                title = { Text(stringResource(if (s.isNew) R.string.edit_title_new else R.string.edit_title_edit)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 }
             )
@@ -71,7 +74,7 @@ fun EditConnectionScreen(
             OutlinedTextField(
                 value = s.name,
                 onValueChange = { v -> vm.update { it.copy(name = v) } },
-                label = { Text("Название") },
+                label = { Text(stringResource(R.string.field_name)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -92,7 +95,7 @@ fun EditConnectionScreen(
             }
             if (s.protocol != Protocol.RDP) {
                 Text(
-                    "Запуск сейчас поддерживается только для RDP; настройки VNC/SSH сохраняются, но сеанс не открывается.",
+                    stringResource(R.string.edit_rdp_only_hint),
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall
                 )
             }
@@ -100,26 +103,26 @@ fun EditConnectionScreen(
             OutlinedTextField(
                 value = s.hostname,
                 onValueChange = { v -> vm.update { it.copy(hostname = v) } },
-                label = { Text("Хост / IP") },
+                label = { Text(stringResource(R.string.field_host)) },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
                 value = s.port,
                 onValueChange = { v -> vm.update { it.copy(port = v.filter { c -> c.isDigit() }) } },
-                label = { Text("Порт") },
+                label = { Text(stringResource(R.string.field_port)) },
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
                 value = s.username,
                 onValueChange = { v -> vm.update { it.copy(username = v) } },
-                label = { Text("Пользователь") },
+                label = { Text(stringResource(R.string.field_user)) },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
                 value = s.domain,
                 onValueChange = { v -> vm.update { it.copy(domain = v) } },
-                label = { Text("Домен") },
+                label = { Text(stringResource(R.string.field_domain)) },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
@@ -127,8 +130,10 @@ fun EditConnectionScreen(
                 onValueChange = { v -> vm.update { it.copy(password = v) } },
                 label = {
                     Text(
-                        if (s.hasStoredPassword && s.password == null)
-                            "Пароль (сохранён — оставьте пустым)" else "Пароль"
+                        stringResource(
+                            if (s.hasStoredPassword && s.password == null)
+                                R.string.field_password_stored else R.string.field_password
+                        )
                     )
                 },
                 visualTransformation = PasswordVisualTransformation(),
@@ -142,7 +147,7 @@ fun EditConnectionScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Полноэкранный режим")
+                    Text(stringResource(R.string.field_fullscreen))
                     Switch(
                         checked = s.fullscreen,
                         onCheckedChange = { v -> vm.update { it.copy(fullscreen = v) } }
@@ -153,7 +158,7 @@ fun EditConnectionScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Консольная сессия (/admin)")
+                    Text(stringResource(R.string.field_console))
                     Switch(
                         checked = s.consoleSession,
                         onCheckedChange = { v -> vm.update { it.copy(consoleSession = v) } }
@@ -162,7 +167,7 @@ fun EditConnectionScreen(
                 OutlinedTextField(
                     value = s.gatewayHostname,
                     onValueChange = { v -> vm.update { it.copy(gatewayHostname = v) } },
-                    label = { Text("RD Gateway (необязательно)") },
+                    label = { Text(stringResource(R.string.field_gateway)) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -170,14 +175,14 @@ fun EditConnectionScreen(
             OutlinedTextField(
                 value = s.description,
                 onValueChange = { v -> vm.update { it.copy(description = v) } },
-                label = { Text("Описание") },
+                label = { Text(stringResource(R.string.field_description)) },
                 modifier = Modifier.fillMaxWidth()
             )
 
             Button(
-                onClick = { vm.save(onBack) },
+                onClick = { vm.save(defaultName, onBack) },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Сохранить") }
+            ) { Text(stringResource(R.string.action_save)) }
         }
     }
 }

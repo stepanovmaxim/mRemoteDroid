@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="action_ok">确定</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_delete">删除</string>
+    <string name="action_back">返回</string>
+    <string name="action_save">保存</string>
+    <string name="action_close">关闭</string>
+    <string name="action_edit">编辑</string>
+    <string name="action_add_here">添加到此处</string>
+
+    <string name="crash_title">应用意外关闭</string>
+    <string name="crash_message">请将错误报告发送给开发者，以便查找并修复问题。报告中绝不会包含密码。</string>
+    <string name="crash_send">发送报告</string>
+    <string name="crash_copy">复制</string>
+    <string name="crash_copied">报告已复制</string>
+
+    <string name="edit_title_new">新建连接</string>
+    <string name="edit_title_edit">编辑连接</string>
+    <string name="field_name">名称</string>
+    <string name="field_host">主机 / IP</string>
+    <string name="field_port">端口</string>
+    <string name="field_user">用户名</string>
+    <string name="field_domain">域</string>
+    <string name="field_password">密码</string>
+    <string name="field_password_stored">密码（已保存，留空则保留原密码）</string>
+    <string name="field_fullscreen">全屏</string>
+    <string name="field_console">控制台会话 (/admin)</string>
+    <string name="field_gateway">远程桌面网关（可选）</string>
+    <string name="field_description">描述</string>
+    <string name="edit_rdp_only_hint">目前只能打开 RDP 连接。VNC/SSH 设置会被保存，但不会启动会话。</string>
+    <string name="default_connection_name">新建连接</string>
+
+    <string name="unlock_title">解锁密码</string>
+    <string name="cd_sort">排序</string>
+    <string name="cd_menu">菜单</string>
+    <string name="cd_actions">操作</string>
+    <string name="cd_add_connection">添加连接</string>
+    <string name="cd_clear">清除</string>
+    <string name="menu_new_folder">新建文件夹</string>
+    <string name="menu_import">导入 confCons.xml</string>
+    <string name="menu_export">导出 confCons.xml</string>
+    <string name="menu_biometric">生物识别锁</string>
+    <string name="menu_about">关于</string>
+    <string name="search_hint">按名称、主机、用户搜索</string>
+    <string name="empty_list">还没有连接。\n点按 + 添加，或导入 confCons.xml 文件。</string>
+    <string name="nothing_found">未找到结果。</string>
+    <string name="session_open_hint">会话已打开，点按即可返回</string>
+    <string name="sort_name_asc">名称 A→Z</string>
+    <string name="sort_name_desc">名称 Z→A</string>
+    <string name="delete_title">要删除吗？</string>
+    <string name="delete_folder_message">文件夹“%1$s”及其中的所有内容都将被删除。</string>
+    <string name="delete_connection_message">连接“%1$s”将被删除。</string>
+
+    <string name="import_title">导入 confCons.xml</string>
+    <string name="import_hint">mRemoteNG 文件的密码。如果文件未设置密码保护，请保留默认值“mR3m”。</string>
+    <string name="import_choose_file">选择文件</string>
+    <string name="import_replace">替换当前列表</string>
+    <string name="export_title">导出 confCons.xml</string>
+    <string name="export_hint">用于加密文件的密码。“mR3m”表示未受保护的文件，mRemoteNG 打开时不会要求输入密码。</string>
+    <string name="export_save_file">保存文件</string>
+    <string name="file_password">文件密码</string>
+    <string name="msg_import_error">导入失败：%1$s</string>
+    <string name="msg_import_done">已导入连接：%1$d，文件夹：%2$d。</string>
+    <string name="msg_import_passwords">已解密密码：%1$d。</string>
+    <string name="msg_import_passwords_failed">无法解密的密码：%1$d。</string>
+    <string name="msg_import_password_hint">如果该文件在 mRemoteNG 中设置了密码，请重新导入，并输入该密码代替 mR3m。</string>
+    <string name="msg_export_done">已导出到 confCons.xml。</string>
+    <string name="msg_export_error">导出失败：%1$s</string>
+
+    <string name="msg_max_sessions">最多只能同时打开 %1$d 个会话。请先关闭其中一个。</string>
+    <string name="msg_launch_failed">无法启动会话。</string>
+
+    <string name="about_title">关于</string>
+    <string name="about_version">版本 %1$s</string>
+    <string name="about_tagline">内置 FreeRDP 引擎的远程桌面 (RDP) 连接管理器。</string>
+    <string name="about_source">源代码</string>
+    <string name="about_privacy">隐私政策</string>
+    <string name="about_licenses">开源许可</string>
+    <string name="about_tap_license">点按可显示或隐藏许可文本。</string>
+    <string name="about_disclaimer">mRemoteDroid 是一个独立项目，与 mRemoteNG 项目无关，也未获得其认可。导入和导出功能仅出于兼容性目的使用 mRemoteNG 的 confCons.xml 文件格式。</string>
+    <string name="about_mpl_note">本应用中使用的 FreeRDP Android 客户端代码已被修改。其源代码与整个应用的源代码一样，可在代码仓库中获取。</string>
+</resources>

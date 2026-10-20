@@ -1,5 +1,8 @@
 package com.mremotedroid.app.ui.tree
 
+import android.content.Context
+import com.mremotedroid.app.R
+import androidx.compose.ui.res.stringResource
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
@@ -79,7 +83,8 @@ import com.mremotedroid.app.security.BiometricGate
 fun ConnectionTreeScreen(
     vm: TreeViewModel,
     onAddConnection: (parentId: String?) -> Unit,
-    onEditConnection: (nodeId: String) -> Unit
+    onEditConnection: (nodeId: String) -> Unit,
+    onAbout: () -> Unit
 ) {
     val context = LocalContext.current
     val activity = context as? FragmentActivity
@@ -120,7 +125,7 @@ fun ConnectionTreeScreen(
 
     LaunchedEffect(message) {
         message?.let {
-            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, it.toText(context), Toast.LENGTH_LONG).show()
             vm.clearMessage()
         }
     }
@@ -139,7 +144,7 @@ fun ConnectionTreeScreen(
         if (vm.needsUnlock(node) && activity != null) {
             BiometricGate.authenticate(
                 activity = activity,
-                title = "Разблокировка паролей",
+                title = context.getString(R.string.unlock_title),
                 subtitle = node.name,
                 onSuccess = { vm.markUnlocked(); connect(node) },
                 onFailure = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
@@ -156,12 +161,12 @@ fun ConnectionTreeScreen(
                 actions = {
                     Box {
                         IconButton(onClick = { sortMenuOpen = true }) {
-                            Icon(Icons.Default.SortByAlpha, contentDescription = "Сортировка")
+                            Icon(Icons.Default.SortByAlpha, contentDescription = stringResource(R.string.cd_sort))
                         }
                         DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
                             SortMode.entries.forEach { mode ->
                                 DropdownMenuItem(
-                                    text = { Text(mode.label) },
+                                    text = { Text(stringResource(mode.labelRes)) },
                                     trailingIcon = {
                                         if (mode == sort) Icon(Icons.Default.Check, null)
                                     },
@@ -172,27 +177,27 @@ fun ConnectionTreeScreen(
                     }
                     Box {
                         IconButton(onClick = { overflowOpen = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Меню")
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_menu))
                         }
                         DropdownMenu(expanded = overflowOpen, onDismissRequest = { overflowOpen = false }) {
                             DropdownMenuItem(
-                                text = { Text("Новая папка") },
+                                text = { Text(stringResource(R.string.menu_new_folder)) },
                                 leadingIcon = { Icon(Icons.Default.CreateNewFolder, null) },
                                 onClick = { overflowOpen = false; showFolderDialog = true }
                             )
                             DropdownMenuItem(
-                                text = { Text("Импорт confCons.xml") },
+                                text = { Text(stringResource(R.string.menu_import)) },
                                 leadingIcon = { Icon(Icons.Default.Upload, null) },
                                 onClick = { overflowOpen = false; showImportDialog = true }
                             )
                             DropdownMenuItem(
-                                text = { Text("Экспорт confCons.xml") },
+                                text = { Text(stringResource(R.string.menu_export)) },
                                 leadingIcon = { Icon(Icons.Default.Download, null) },
                                 onClick = { overflowOpen = false; showExportDialog = true }
                             )
                             HorizontalDivider()
                             DropdownMenuItem(
-                                text = { Text("Биометрическая защита") },
+                                text = { Text(stringResource(R.string.menu_biometric)) },
                                 leadingIcon = { Icon(Icons.Default.Fingerprint, null) },
                                 trailingIcon = { if (biometricOn) Icon(Icons.Default.Check, null) },
                                 onClick = {
@@ -201,6 +206,12 @@ fun ConnectionTreeScreen(
                                     overflowOpen = false
                                 }
                             )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_about)) },
+                                leadingIcon = { Icon(Icons.Default.Info, null) },
+                                onClick = { overflowOpen = false; onAbout() }
+                            )
                         }
                     }
                 }
@@ -208,7 +219,7 @@ fun ConnectionTreeScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { onAddConnection(null) }) {
-                Icon(Icons.Default.Add, contentDescription = "Добавить подключение")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_connection))
             }
         }
     ) { padding ->
@@ -221,11 +232,11 @@ fun ConnectionTreeScreen(
                 trailingIcon = {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = { vm.setQuery("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Очистить")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.cd_clear))
                         }
                     }
                 },
-                placeholder = { Text("Поиск по имени, хосту, пользователю") },
+                placeholder = { Text(stringResource(R.string.search_hint)) },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)
             )
 
@@ -233,8 +244,8 @@ fun ConnectionTreeScreen(
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         if (query.isBlank())
-                            "Нет подключений.\nДобавьте через + или импортируйте confCons.xml."
-                        else "Ничего не найдено.",
+                            stringResource(R.string.empty_list)
+                        else stringResource(R.string.nothing_found),
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
@@ -263,8 +274,8 @@ fun ConnectionTreeScreen(
 
     if (showFolderDialog) {
         TextPromptDialog(
-            title = "Новая папка",
-            label = "Название",
+            title = stringResource(R.string.menu_new_folder),
+            label = stringResource(R.string.field_name),
             onConfirm = { vm.createFolder(null, it); showFolderDialog = false },
             onDismiss = { showFolderDialog = false }
         )
@@ -272,9 +283,9 @@ fun ConnectionTreeScreen(
 
     if (showImportDialog) {
         PasswordActionDialog(
-            title = "Импорт confCons.xml",
-            hint = "Пароль файла mRemoteNG. По умолчанию «mR3m», если файл не защищён паролем.",
-            confirmLabel = "Выбрать файл",
+            title = stringResource(R.string.import_title),
+            hint = stringResource(R.string.import_hint),
+            confirmLabel = stringResource(R.string.import_choose_file),
             showReplace = true,
             onConfirm = { pwd, replace ->
                 showImportDialog = false
@@ -287,9 +298,9 @@ fun ConnectionTreeScreen(
 
     if (showExportDialog) {
         PasswordActionDialog(
-            title = "Экспорт confCons.xml",
-            hint = "Пароль для шифрования файла. «mR3m» = незащищённый файл (mRemoteNG откроет без запроса пароля).",
-            confirmLabel = "Сохранить файл",
+            title = stringResource(R.string.export_title),
+            hint = stringResource(R.string.export_hint),
+            confirmLabel = stringResource(R.string.export_save_file),
             showReplace = false,
             onConfirm = { pwd, _ ->
                 showExportDialog = false
@@ -302,6 +313,18 @@ fun ConnectionTreeScreen(
 }
 
 private val SessionOpenColor = Color(0xFF2E7D32)
+
+private fun TreeMessage.toText(context: Context): String = when (this) {
+    is TreeMessage.ImportError -> context.getString(R.string.msg_import_error, detail.orEmpty())
+    is TreeMessage.ExportError -> context.getString(R.string.msg_export_error, detail.orEmpty())
+    TreeMessage.Exported -> context.getString(R.string.msg_export_done)
+    is TreeMessage.Imported -> buildString {
+        append(context.getString(R.string.msg_import_done, connections, folders))
+        if (passwordsDecrypted > 0) append(' ').append(context.getString(R.string.msg_import_passwords, passwordsDecrypted))
+        if (passwordsFailed > 0) append(' ').append(context.getString(R.string.msg_import_passwords_failed, passwordsFailed))
+        if (passwordsFailed > 0 && passwordsDecrypted == 0) append(' ').append(context.getString(R.string.msg_import_password_hint))
+    }
+}
 
 @Composable
 private fun TreeRowItem(
@@ -370,7 +393,7 @@ private fun TreeRowItem(
                 )
                 if (sessionOpen) {
                     Text(
-                        "Сеанс открыт — нажмите, чтобы вернуться",
+                        stringResource(R.string.session_open_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = SessionOpenColor
                     )
@@ -379,24 +402,24 @@ private fun TreeRowItem(
         }
         Box {
             IconButton(onClick = { menuOpen = true }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Действия")
+                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_actions))
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 if (isFolder) {
                     DropdownMenuItem(
-                        text = { Text("Добавить сюда") },
+                        text = { Text(stringResource(R.string.action_add_here)) },
                         leadingIcon = { Icon(Icons.Default.Add, null) },
                         onClick = { menuOpen = false; onAddHere() }
                     )
                 } else {
                     DropdownMenuItem(
-                        text = { Text("Изменить") },
+                        text = { Text(stringResource(R.string.action_edit)) },
                         leadingIcon = { Icon(Icons.Default.Edit, null) },
                         onClick = { menuOpen = false; onEdit() }
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text("Удалить") },
+                    text = { Text(stringResource(R.string.action_delete)) },
                     leadingIcon = { Icon(Icons.Default.Delete, null) },
                     onClick = { menuOpen = false; confirmDelete = true }
                 )
@@ -407,18 +430,18 @@ private fun TreeRowItem(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Удалить?") },
+            title = { Text(stringResource(R.string.delete_title)) },
             text = {
                 Text(
-                    if (isFolder) "Папка «${node.name}» и всё её содержимое будут удалены."
-                    else "Подключение «${node.name}» будет удалено."
+                    if (isFolder) stringResource(R.string.delete_folder_message, node.name)
+                    else stringResource(R.string.delete_connection_message, node.name)
                 )
             },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; onDelete() }) { Text("Удалить") }
+                TextButton(onClick = { confirmDelete = false; onDelete() }) { Text(stringResource(R.string.action_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("Отмена") }
+                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.action_cancel)) }
             }
         )
     }
@@ -444,9 +467,9 @@ private fun TextPromptDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = { if (text.isNotBlank()) onConfirm(text.trim()) }) { Text("OK") }
+            TextButton(onClick = { if (text.isNotBlank()) onConfirm(text.trim()) }) { Text(stringResource(R.string.action_ok)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 
@@ -471,13 +494,13 @@ private fun PasswordActionDialog(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Пароль файла") },
+                    label = { Text(stringResource(R.string.file_password)) },
                     singleLine = true
                 )
                 if (showReplace) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = replace, onCheckedChange = { replace = it })
-                        Text("Заменить текущий список")
+                        Text(stringResource(R.string.import_replace))
                     }
                 }
             }
@@ -487,7 +510,7 @@ private fun PasswordActionDialog(
                 Text(confirmLabel)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 

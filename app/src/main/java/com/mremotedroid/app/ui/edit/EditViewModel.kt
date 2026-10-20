@@ -69,12 +69,12 @@ class EditViewModel(
 
     fun update(transform: (EditState) -> EditState) { _state.value = transform(_state.value) }
 
-    fun save(onDone: () -> Unit) = viewModelScope.launch {
+    fun save(defaultName: String, onDone: () -> Unit) = viewModelScope.launch {
         val s = _state.value
         repo.saveConnection(
             existing = existing,
             parentId = existing?.parentId ?: parentId,
-            name = s.name.ifBlank { s.hostname.ifBlank { "Новое подключение" } },
+            name = s.name.ifBlank { s.hostname.ifBlank { defaultName } },
             protocol = s.protocol.name,
             hostname = s.hostname.trim(),
             port = s.port.toIntOrNull() ?: s.protocol.defaultPort,

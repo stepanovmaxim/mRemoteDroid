@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- mRemoteDroid: session screen strings missing from the upstream FreeRDP translation -->
+<resources>
+    <string name="cancel">Отмена</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    <string name="dlg_dont_show_again">Больше не спрашивать</string>
+    <string name="dlg_msg_connecting">Подключение…</string>
+    <string name="dlg_msg_verify_certificate">Не удаётся проверить подлинность удалённого компьютера. Всё равно подключиться?</string>
+    <string name="dlg_title_credentials">Введите учётные данные</string>
+    <string name="dlg_title_verify_certificate">Проверка сертификата</string>
+    <string name="info_capabilities_changed">Параметры экрана изменены на поддерживаемые сервером.</string>
+    <string name="settings_domain">Домен</string>
+    <string name="settings_password">Пароль</string>
+    <string name="settings_username">Имя пользователя</string>
+</resources>
