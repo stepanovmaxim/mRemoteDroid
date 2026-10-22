@@ -155,6 +155,8 @@ public class LibFreeRDP
 
 	private static native boolean freerdp_send_suppress_output(long inst, boolean suppress);
 
+	private static native boolean freerdp_send_monitor_layout(long inst, int width, int height);
+
 	private static native String freerdp_get_last_error_string(long inst);
 
 	public static void setEventListener(EventListener l)
@@ -522,6 +524,14 @@ public class LibFreeRDP
 		if (inst == 0)
 			return false;
 		return freerdp_send_suppress_output(inst, suppress);
+	}
+
+	/** Ask the server to resize the remote desktop (Display Control channel). */
+	public static boolean sendMonitorLayout(long inst, int width, int height)
+	{
+		if (inst == 0)
+			return false;
+		return freerdp_send_monitor_layout(inst, width, height);
 	}
 
 	private static void OnConnectionSuccess(long inst)

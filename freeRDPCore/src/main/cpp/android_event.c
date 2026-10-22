@@ -161,6 +161,30 @@ static BOOL android_send_char_as_scancodes(rdpInput* input, UINT16 flags, UINT16
 	return shift ? android_send_vk(input, VK_LSHIFT, FALSE) : TRUE;
 }
 
+/* Send a Display Control monitor layout, or keep it until the server's capabilities
+ * arrive (they come a few seconds after connecting; earlier requests are ignored). */
+BOOL android_send_monitor_layout(androidContext* afc, UINT32 width, UINT32 height)
+{
+	DISPLAY_CONTROL_MONITOR_LAYOUT layout = { 0 };
+
+	if (!afc->disp || !afc->dispCapsReceived || !afc->disp->SendMonitorLayout)
+	{
+		afc->dispPendingWidth = width;
+		afc->dispPendingHeight = height;
+		return TRUE;
+	}
+
+	afc->dispPendingWidth = afc->dispPendingHeight = 0;
+	layout.Flags = DISPLAY_CONTROL_MONITOR_PRIMARY;
+	layout.Width = width;
+	layout.Height = height;
+	layout.Orientation = ORIENTATION_LANDSCAPE;
+	layout.DesktopScaleFactor = 100;
+	layout.DeviceScaleFactor = 100;
+	WLog_INFO(TAG, "Display Control: requesting %" PRIu32 "x%" PRIu32, width, height);
+	return afc->disp->SendMonitorLayout(afc->disp, 1, &layout) == CHANNEL_RC_OK;
+}
+
 static BOOL android_process_event(ANDROID_EVENT_QUEUE* queue, freerdp* inst)
 {
 	rdpContext* context;
@@ -250,6 +274,17 @@ static BOOL android_process_event(ANDROID_EVENT_QUEUE* queue, freerdp* inst)
 				if (context->update && context->update->SuppressOutput)
 					rc = context->update->SuppressOutput(context, so->suppress ? 0 : 1,
 					                                     so->suppress ? NULL : &rect);
+			}
+			break;
+
+			case EVENT_TYPE_MONITOR_LAYOUT:
+			{
+				/* Ask the server to resize the remote desktop to the window size
+				 * (window resized / maximized in Samsung DeX or split screen). The
+				 * server answers with a desktop resize; servers without Display
+				 * Control (e.g. Windows Server 2008) never open the channel. */
+				ANDROID_EVENT_MONITOR_LAYOUT* ml = (ANDROID_EVENT_MONITOR_LAYOUT*)event;
+				rc = android_send_monitor_layout(afc, ml->width, ml->height);
 			}
 			break;
 
@@ -397,6 +432,20 @@ ANDROID_EVENT* android_event_suppress_output_new(BOOL suppress)
 	return (ANDROID_EVENT*)event;
 }
 
+ANDROID_EVENT* android_event_monitor_layout_new(UINT32 width, UINT32 height)
+{
+	ANDROID_EVENT_MONITOR_LAYOUT* event =
+	    (ANDROID_EVENT_MONITOR_LAYOUT*)calloc(1, sizeof(ANDROID_EVENT_MONITOR_LAYOUT));
+
+	if (!event)
+		return NULL;
+
+	event->type = EVENT_TYPE_MONITOR_LAYOUT;
+	event->width = width;
+	event->height = height;
+	return (ANDROID_EVENT*)event;
+}
+
 static void android_event_disconnect_free(ANDROID_EVENT* event)
 {
 	free(event);
@@ -535,6 +584,7 @@ void android_event_free(ANDROID_EVENT* event)
 			break;
 
 		case EVENT_TYPE_SUPPRESS_OUTPUT:
+		case EVENT_TYPE_MONITOR_LAYOUT:
 			free(event);
 			break;
 

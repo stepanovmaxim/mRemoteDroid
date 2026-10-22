@@ -31,6 +31,8 @@
 #include <freerdp/client/rdpei.h>
 #include <freerdp/client/rdpgfx.h>
 #include <freerdp/client/cliprdr.h>
+#include <freerdp/client/disp.h>
+#include <freerdp/channels/disp.h>
 #include <freerdp/codec/h264.h>
 #include <freerdp/channels/channels.h>
 #include <freerdp/client/channels.h>
@@ -57,6 +59,20 @@
 
 /* Defines the JNI version supported by this library. */
 #define FREERDP_JNI_VERSION FREERDP_VERSION_FULL
+static UINT android_disp_caps(DispClientContext* disp, UINT32 maxNumMonitors,
+                              UINT32 maxMonitorAreaFactorA, UINT32 maxMonitorAreaFactorB)
+{
+	androidContext* afc = disp ? (androidContext*)disp->custom : NULL;
+	WLog_INFO(TAG, "Display Control ready (max monitors %" PRIu32 ")", maxNumMonitors);
+	if (afc)
+	{
+		afc->dispCapsReceived = TRUE;
+		if (afc->dispPendingWidth && afc->dispPendingHeight)
+			android_send_monitor_layout(afc, afc->dispPendingWidth, afc->dispPendingHeight);
+	}
+	return CHANNEL_RC_OK;
+}
+
 static void android_OnChannelConnectedEventHandler(void* context,
                                                    const ChannelConnectedEventArgs* e)
 {
@@ -75,6 +91,13 @@ static void android_OnChannelConnectedEventHandler(void* context,
 	if (strcmp(e->name, CLIPRDR_SVC_CHANNEL_NAME) == 0)
 	{
 		android_cliprdr_init(afc, (CliprdrClientContext*)e->pInterface);
+	}
+	else if (strcmp(e->name, DISP_DVC_CHANNEL_NAME) == 0)
+	{
+		afc->disp = (DispClientContext*)e->pInterface;
+		afc->dispCapsReceived = FALSE; /* keep a pending resize: it is sent once caps arrive */
+		afc->disp->custom = afc;
+		afc->disp->DisplayControlCaps = android_disp_caps;
 	}
 	else
 		freerdp_client_OnChannelConnectedEventHandler(context, e);
@@ -98,6 +121,11 @@ static void android_OnChannelDisconnectedEventHandler(void* context,
 	if (strcmp(e->name, CLIPRDR_SVC_CHANNEL_NAME) == 0)
 	{
 		android_cliprdr_uninit(afc, (CliprdrClientContext*)e->pInterface);
+	}
+	else if (strcmp(e->name, DISP_DVC_CHANNEL_NAME) == 0)
+	{
+		afc->disp = NULL;
+		afc->dispCapsReceived = FALSE;
 	}
 	else
 		freerdp_client_OnChannelDisconnectedEventHandler(context, e);
@@ -173,6 +201,13 @@ static BOOL android_desktop_resize(rdpContext* context)
 	WINPR_ASSERT(context->settings);
 	WINPR_ASSERT(context->instance);
 
+	/* the server changed the desktop size (e.g. after a Display Control request):
+	 * resize the GDI frame buffer before Java recreates its bitmap to match */
+	if (context->gdi &&
+	    !gdi_resize(context->gdi, freerdp_settings_get_uint32(context->settings, FreeRDP_DesktopWidth),
+	                freerdp_settings_get_uint32(context->settings, FreeRDP_DesktopHeight)))
+		return FALSE;
+
 	freerdp_callback("OnGraphicsResize", "(JIII)V", (jlong)context->instance,
 	                 freerdp_settings_get_uint32(context->settings, FreeRDP_DesktopWidth),
 	                 freerdp_settings_get_uint32(context->settings, FreeRDP_DesktopHeight),
@@ -205,6 +240,12 @@ static BOOL android_pre_connect(freerdp* instance)
 	 * so the handshake fails before NLA. Allow TLS 1.0+ at level 0, like
 	 * mstsc does; newer servers still negotiate TLS 1.2/1.3. */
 	if (!freerdp_settings_set_uint32(settings, FreeRDP_TlsSecLevel, 0))
+		return FALSE;
+
+	/* Display Control channel: the session window size (Samsung DeX, split screen,
+	 * rotation) can change the remote resolution, like "dynamic resolution" in mstsc */
+	if (!freerdp_settings_set_bool(settings, FreeRDP_SupportDisplayControl, TRUE) ||
+	    !freerdp_settings_set_bool(settings, FreeRDP_DynamicResolutionUpdate, TRUE))
 		return FALSE;
 	if (!freerdp_settings_set_uint16(settings, FreeRDP_TLSMinVersion, 0x0301))
 		return FALSE;
@@ -976,6 +1017,25 @@ Java_com_freerdp_freerdpcore_services_LibFreeRDP_freerdp_1send_1suppress_1output
 {
 	freerdp* inst = (freerdp*)instance;
 	ANDROID_EVENT* event = android_event_suppress_output_new(suppress == JNI_TRUE);
+
+	if (!event)
+		return JNI_FALSE;
+
+	if (!android_push_event(inst, event))
+	{
+		android_event_free(event);
+		return JNI_FALSE;
+	}
+
+	return JNI_TRUE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_freerdp_freerdpcore_services_LibFreeRDP_freerdp_1send_1monitor_1layout(
+    JNIEnv* env, jclass cls, jlong instance, jint width, jint height)
+{
+	freerdp* inst = (freerdp*)instance;
+	ANDROID_EVENT* event = android_event_monitor_layout_new((UINT32)width, (UINT32)height);
 
 	if (!event)
 		return JNI_FALSE;

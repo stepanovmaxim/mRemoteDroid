@@ -18,6 +18,7 @@
 
 #include <freerdp/freerdp.h>
 #include <freerdp/client/cliprdr.h>
+#include <freerdp/client/disp.h>
 
 #include "android_event.h"
 
@@ -38,6 +39,15 @@ typedef struct
 	CLIPRDR_FORMAT* serverFormats;
 	CliprdrClientContext* cliprdr;
 	UINT32 clipboardCapabilities;
+
+	/* Display Control (MS-RDPEDISP): lets the window size drive the remote resolution */
+	DispClientContext* disp;
+	BOOL dispCapsReceived;
+	/* a resize asked for before the server announced its capabilities */
+	UINT32 dispPendingWidth;
+	UINT32 dispPendingHeight;
 } androidContext;
+
+FREERDP_LOCAL BOOL android_send_monitor_layout(androidContext* afc, UINT32 width, UINT32 height);
 
 #endif /* FREERDP_CLIENT_ANDROID_FREERDP_H */

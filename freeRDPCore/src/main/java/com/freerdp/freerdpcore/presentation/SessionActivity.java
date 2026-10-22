@@ -146,6 +146,13 @@ public class SessionActivity extends AppCompatActivity
 	private boolean sessionConnected = false;
 	private boolean disconnectRequested = false;
 	private boolean activityVisible = false;
+
+	// Dynamic resolution: when the session window changes size (Samsung DeX window
+	// resized or maximized, split screen, rotation) ask the server to match it.
+	private static final int REMOTE_RESIZE_DELAY_MS = 700;
+	private int lastRequestedWidth = -1;
+	private int lastRequestedHeight = -1;
+	private final Runnable remoteResize = this::requestRemoteResize;
 	private String sessionTag;
 
 	// Session screen rotation, chosen in the session menu and remembered.
@@ -391,6 +398,8 @@ public class SessionActivity extends AppCompatActivity
 						    refitPending = false;
 						    fitSessionToScreen();
 					    }
+					    if (sizeChanged && !keyboardUp)
+						    scheduleRemoteResize(REMOTE_RESIZE_DELAY_MS);
 				    }
 			    }
 		    });
@@ -782,6 +791,44 @@ public class SessionActivity extends AppCompatActivity
 		Log.v(TAG, "Session.onStart");
 		activityVisible = true;
 		updateSuppressOutput();
+	}
+
+	private void scheduleRemoteResize(int delayMs)
+	{
+		uiHandler.removeCallbacks(remoteResize);
+		uiHandler.postDelayed(remoteResize, delayMs);
+	}
+
+	/**
+	 * Ask the server to change the remote desktop to the current window size. A
+	 * full-screen phone in portrait keeps the landscape desktop (fitted to width);
+	 * windows (DeX, split screen) and landscape follow the window exactly. Servers
+	 * without Display Control ignore it and the desktop is just scaled as before.
+	 */
+	private void requestRemoteResize()
+	{
+		if (session == null || !sessionConnected || bitmap == null || session.getInstance() == 0)
+			return;
+		if (sysKeyboardVisible || extKeyboardVisible)
+			return;
+		int w = scrollView.getWidth();
+		int h = scrollView.getHeight();
+		if (w <= 0 || h <= 0)
+			return;
+		boolean windowed = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInMultiWindowMode();
+		if (!windowed && h > w)
+			return;
+		// MS-RDPEDISP: 200..8192 px, width must be even
+		w = Math.max(200, Math.min(8192, w)) & ~1;
+		h = Math.max(200, Math.min(8192, h));
+		if (w == bitmap.getWidth() && h == bitmap.getHeight())
+			return;
+		if (w == lastRequestedWidth && h == lastRequestedHeight)
+			return;
+		lastRequestedWidth = w;
+		lastRequestedHeight = h;
+		Log.i(TAG, "Requesting remote resolution " + w + "x" + h);
+		LibFreeRDP.sendMonitorLayout(session.getInstance(), w, h);
 	}
 
 	/** Stop graphics while this session window is not visible; resume (repaint) when it is. */
@@ -2072,6 +2119,9 @@ public class SessionActivity extends AppCompatActivity
 
 			// bind session
 			bindSession();
+			// the window may differ from the size we connected with (e.g. a portrait
+			// DeX window); give the server time to open the Display Control channel
+			scheduleRemoteResize(2500);
 			if (!activityVisible)
 				updateSuppressOutput();
 
