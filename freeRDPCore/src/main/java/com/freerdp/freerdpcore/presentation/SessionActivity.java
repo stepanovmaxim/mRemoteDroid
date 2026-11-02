@@ -152,6 +152,48 @@ public class SessionActivity extends AppCompatActivity
 	private static final int REMOTE_RESIZE_DELAY_MS = 700;
 	private int lastRequestedWidth = -1;
 	private int lastRequestedHeight = -1;
+
+	// Windows display scale for the session (like 150% in Windows display settings), so
+	// dense screens (Fold, tablets) don't show a tiny desktop. 0 = automatic.
+	private static final String PREF_SCALE = "desktop_scale";
+	private static final int[] SCALE_OPTIONS = { 0, 100, 125, 150, 175, 200, 250 };
+	// pixels per inch of a comfortable Windows UI on a hand-held screen
+	private static final float COMFORT_DPI = 224f;
+	private static final int MIN_LOGICAL_LONG = 1024;
+	private static final int MIN_LOGICAL_SHORT = 720;
+	private int lastRequestedScale = -1;
+
+	private int scalePreference()
+	{
+		return getSharedPreferences("session_ui", MODE_PRIVATE).getInt(PREF_SCALE, 0);
+	}
+
+	/** Scale in percent for a remote desktop of this size in pixels (steps of 25). */
+	private int desktopScaleFor(int width, int height)
+	{
+		int chosen = scalePreference();
+		if (chosen != 0)
+			return chosen;
+		float scale = getResources().getDisplayMetrics().densityDpi / COMFORT_DPI;
+		// never so large that the logical desktop gets too small for Windows dialogs
+		scale = Math.min(scale, Math.max(width, height) / (float)MIN_LOGICAL_LONG);
+		scale = Math.min(scale, Math.min(width, height) / (float)MIN_LOGICAL_SHORT);
+		int percent = ((int)(scale * 100)) / 25 * 25;
+		return Math.max(100, Math.min(300, percent));
+	}
+
+	/** MS-RDPEDISP allows only 100, 140 and 180 for the device scale. */
+	private static int deviceScaleFor(int desktopScale)
+	{
+		return desktopScale < 120 ? 100 : (desktopScale < 160 ? 140 : 180);
+	}
+
+	private String scaleLabel()
+	{
+		int chosen = scalePreference();
+		return chosen == 0 ? getString(R.string.menu_scale_auto)
+		                   : getString(R.string.menu_scale_value, chosen);
+	}
 	private final Runnable remoteResize = this::requestRemoteResize;
 	private String sessionTag;
 
@@ -716,6 +758,8 @@ public class SessionActivity extends AppCompatActivity
 		                  getString(R.string.menu_ext_keyboard), R.id.session_ext_keyboard);
 		addSessionMenuRow(list, popup, R.drawable.ic_session_rotate, getString(orientationLabel()),
 		                  R.id.session_orientation);
+		addSessionMenuRow(list, popup, R.drawable.ic_session_scale, scaleLabel(),
+		                  R.id.session_scale);
 		addSessionMenuRow(list, popup, R.drawable.ic_session_fit,
 		                  getString(R.string.menu_fit_screen), R.id.session_fit_screen);
 		addSessionMenuRow(list, popup, R.drawable.ic_session_list, getString(R.string.menu_to_list),
@@ -802,7 +846,7 @@ public class SessionActivity extends AppCompatActivity
 	/**
 	 * Ask the server to change the remote desktop to the current window size. A
 	 * full-screen phone in portrait keeps the landscape desktop (fitted to width);
-	 * windows (DeX, split screen) and landscape follow the window exactly. Servers
+	 * windows (DeX, split screen), large screens and landscape follow the window. Servers
 	 * without Display Control ignore it and the desktop is just scaled as before.
 	 */
 	private void requestRemoteResize()
@@ -816,19 +860,28 @@ public class SessionActivity extends AppCompatActivity
 		if (w <= 0 || h <= 0)
 			return;
 		boolean windowed = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInMultiWindowMode();
-		if (!windowed && h > w)
-			return;
+		// foldables and tablets follow the window in any orientation
+		boolean largeScreen = getResources().getConfiguration().smallestScreenWidthDp >= 600;
+		if (!windowed && !largeScreen && h > w)
+		{
+			// keep the current desktop size; only the scale may still change
+			w = bitmap.getWidth();
+			h = bitmap.getHeight();
+		}
 		// MS-RDPEDISP: 200..8192 px, width must be even
 		w = Math.max(200, Math.min(8192, w)) & ~1;
 		h = Math.max(200, Math.min(8192, h));
-		if (w == bitmap.getWidth() && h == bitmap.getHeight())
+		int scale = desktopScaleFor(w, h);
+		boolean sameSize = w == bitmap.getWidth() && h == bitmap.getHeight();
+		if (sameSize && scale == lastRequestedScale)
 			return;
-		if (w == lastRequestedWidth && h == lastRequestedHeight)
+		if (w == lastRequestedWidth && h == lastRequestedHeight && scale == lastRequestedScale)
 			return;
 		lastRequestedWidth = w;
 		lastRequestedHeight = h;
-		Log.i(TAG, "Requesting remote resolution " + w + "x" + h);
-		LibFreeRDP.sendMonitorLayout(session.getInstance(), w, h);
+		lastRequestedScale = scale;
+		Log.i(TAG, "Requesting remote resolution " + w + "x" + h + " at " + scale + "%");
+		LibFreeRDP.sendMonitorLayout(session.getInstance(), w, h, scale, deviceScaleFor(scale));
 	}
 
 	/** Stop graphics while this session window is not visible; resume (repaint) when it is. */
@@ -1051,7 +1104,14 @@ public class SessionActivity extends AppCompatActivity
 			int[] size = landscapeSessionSize();
 			openUri =
 			    openUri.buildUpon().appendQueryParameter("size", size[0] + "x" + size[1]).build();
-			Log.i(TAG, "Session resolution " + size[0] + "x" + size[1]);
+			int scale = desktopScaleFor(size[0], size[1]);
+			lastRequestedScale = scale;
+			openUri = openUri.buildUpon()
+			              .appendQueryParameter("scale-desktop", String.valueOf(scale))
+			              .appendQueryParameter("scale-device",
+			                                    String.valueOf(deviceScaleFor(scale)))
+			              .build();
+			Log.i(TAG, "Session resolution " + size[0] + "x" + size[1] + " at " + scale + "%");
 		}
 		session = GlobalApp.createSession(openUri, sessionTag, getApplicationContext());
 
@@ -1304,6 +1364,21 @@ public class SessionActivity extends AppCompatActivity
 			    .apply();
 			applyOrientationMode();
 			Toast.makeText(this, orientationLabel(), Toast.LENGTH_SHORT).show();
+		}
+		else if (itemId == R.id.session_scale)
+		{
+			// auto -> 100% -> ... -> 250% -> auto; applied live where the server allows it
+			int next = 0;
+			int current = scalePreference();
+			for (int i = 0; i < SCALE_OPTIONS.length; i++)
+				if (SCALE_OPTIONS[i] == current)
+					next = SCALE_OPTIONS[(i + 1) % SCALE_OPTIONS.length];
+			getSharedPreferences("session_ui", MODE_PRIVATE)
+			    .edit()
+			    .putInt(PREF_SCALE, next)
+			    .apply();
+			Toast.makeText(this, scaleLabel(), Toast.LENGTH_SHORT).show();
+			scheduleRemoteResize(REMOTE_RESIZE_DELAY_MS);
 		}
 		else if (itemId == R.id.session_touch_pointer)
 		{

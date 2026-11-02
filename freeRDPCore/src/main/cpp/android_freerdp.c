@@ -68,7 +68,8 @@ static UINT android_disp_caps(DispClientContext* disp, UINT32 maxNumMonitors,
 	{
 		afc->dispCapsReceived = TRUE;
 		if (afc->dispPendingWidth && afc->dispPendingHeight)
-			android_send_monitor_layout(afc, afc->dispPendingWidth, afc->dispPendingHeight);
+			android_send_monitor_layout(afc, afc->dispPendingWidth, afc->dispPendingHeight,
+			                            afc->dispPendingDesktopScale, afc->dispPendingDeviceScale);
 	}
 	return CHANNEL_RC_OK;
 }
@@ -1032,10 +1033,12 @@ Java_com_freerdp_freerdpcore_services_LibFreeRDP_freerdp_1send_1suppress_1output
 
 JNIEXPORT jboolean JNICALL
 Java_com_freerdp_freerdpcore_services_LibFreeRDP_freerdp_1send_1monitor_1layout(
-    JNIEnv* env, jclass cls, jlong instance, jint width, jint height)
+    JNIEnv* env, jclass cls, jlong instance, jint width, jint height, jint desktopScale,
+    jint deviceScale)
 {
 	freerdp* inst = (freerdp*)instance;
-	ANDROID_EVENT* event = android_event_monitor_layout_new((UINT32)width, (UINT32)height);
+	ANDROID_EVENT* event = android_event_monitor_layout_new(
+	    (UINT32)width, (UINT32)height, (UINT32)desktopScale, (UINT32)deviceScale);
 
 	if (!event)
 		return JNI_FALSE;

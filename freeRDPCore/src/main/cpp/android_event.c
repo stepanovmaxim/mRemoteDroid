@@ -163,7 +163,8 @@ static BOOL android_send_char_as_scancodes(rdpInput* input, UINT16 flags, UINT16
 
 /* Send a Display Control monitor layout, or keep it until the server's capabilities
  * arrive (they come a few seconds after connecting; earlier requests are ignored). */
-BOOL android_send_monitor_layout(androidContext* afc, UINT32 width, UINT32 height)
+BOOL android_send_monitor_layout(androidContext* afc, UINT32 width, UINT32 height,
+                                 UINT32 desktopScale, UINT32 deviceScale)
 {
 	DISPLAY_CONTROL_MONITOR_LAYOUT layout = { 0 };
 
@@ -171,6 +172,8 @@ BOOL android_send_monitor_layout(androidContext* afc, UINT32 width, UINT32 heigh
 	{
 		afc->dispPendingWidth = width;
 		afc->dispPendingHeight = height;
+		afc->dispPendingDesktopScale = desktopScale;
+		afc->dispPendingDeviceScale = deviceScale;
 		return TRUE;
 	}
 
@@ -179,9 +182,10 @@ BOOL android_send_monitor_layout(androidContext* afc, UINT32 width, UINT32 heigh
 	layout.Width = width;
 	layout.Height = height;
 	layout.Orientation = ORIENTATION_LANDSCAPE;
-	layout.DesktopScaleFactor = 100;
-	layout.DeviceScaleFactor = 100;
-	WLog_INFO(TAG, "Display Control: requesting %" PRIu32 "x%" PRIu32, width, height);
+	layout.DesktopScaleFactor = desktopScale;
+	layout.DeviceScaleFactor = deviceScale;
+	WLog_INFO(TAG, "Display Control: requesting %" PRIu32 "x%" PRIu32 " at %" PRIu32 "%%", width,
+	          height, desktopScale);
 	return afc->disp->SendMonitorLayout(afc->disp, 1, &layout) == CHANNEL_RC_OK;
 }
 
@@ -284,7 +288,8 @@ static BOOL android_process_event(ANDROID_EVENT_QUEUE* queue, freerdp* inst)
 				 * server answers with a desktop resize; servers without Display
 				 * Control (e.g. Windows Server 2008) never open the channel. */
 				ANDROID_EVENT_MONITOR_LAYOUT* ml = (ANDROID_EVENT_MONITOR_LAYOUT*)event;
-				rc = android_send_monitor_layout(afc, ml->width, ml->height);
+				rc = android_send_monitor_layout(afc, ml->width, ml->height, ml->desktopScale,
+				                                 ml->deviceScale);
 			}
 			break;
 
@@ -432,7 +437,8 @@ ANDROID_EVENT* android_event_suppress_output_new(BOOL suppress)
 	return (ANDROID_EVENT*)event;
 }
 
-ANDROID_EVENT* android_event_monitor_layout_new(UINT32 width, UINT32 height)
+ANDROID_EVENT* android_event_monitor_layout_new(UINT32 width, UINT32 height, UINT32 desktopScale,
+                                                UINT32 deviceScale)
 {
 	ANDROID_EVENT_MONITOR_LAYOUT* event =
 	    (ANDROID_EVENT_MONITOR_LAYOUT*)calloc(1, sizeof(ANDROID_EVENT_MONITOR_LAYOUT));
@@ -443,6 +449,8 @@ ANDROID_EVENT* android_event_monitor_layout_new(UINT32 width, UINT32 height)
 	event->type = EVENT_TYPE_MONITOR_LAYOUT;
 	event->width = width;
 	event->height = height;
+	event->desktopScale = desktopScale;
+	event->deviceScale = deviceScale;
 	return (ANDROID_EVENT*)event;
 }
 

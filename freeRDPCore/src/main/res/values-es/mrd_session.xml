@@ -14,4 +14,6 @@
     <string name="session_notification_title">Conectado: %1$s</string>
     <string name="session_notification_title_many">Sesiones abiertas: %1$d</string>
     <string name="session_notification_text">La sesión sigue conectada en segundo plano. Toca para volver.</string>
+    <string name="menu_scale_auto">Escala: automática</string>
+    <string name="menu_scale_value">Escala: %1$d%%</string>
 </resources>

@@ -53,6 +53,8 @@ typedef struct
 	int type;
 	UINT32 width;
 	UINT32 height;
+	UINT32 desktopScale;
+	UINT32 deviceScale;
 } ANDROID_EVENT_MONITOR_LAYOUT;
 
 typedef struct
@@ -82,7 +84,9 @@ FREERDP_LOCAL ANDROID_EVENT_KEY* android_event_unicodekey_new(UINT16 flags, UINT
 FREERDP_LOCAL ANDROID_EVENT_CURSOR* android_event_cursor_new(UINT16 flags, UINT16 x, UINT16 y);
 FREERDP_LOCAL ANDROID_EVENT* android_event_disconnect_new(void);
 FREERDP_LOCAL ANDROID_EVENT* android_event_suppress_output_new(BOOL suppress);
-FREERDP_LOCAL ANDROID_EVENT* android_event_monitor_layout_new(UINT32 width, UINT32 height);
+FREERDP_LOCAL ANDROID_EVENT* android_event_monitor_layout_new(UINT32 width, UINT32 height,
+                                                              UINT32 desktopScale,
+                                                              UINT32 deviceScale);
 FREERDP_LOCAL ANDROID_EVENT_CLIPBOARD* android_event_clipboard_new(const void* data,
                                                                    size_t data_length);
 

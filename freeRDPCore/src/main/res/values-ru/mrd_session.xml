@@ -13,4 +13,6 @@
     <string name="settings_domain">Домен</string>
     <string name="settings_password">Пароль</string>
     <string name="settings_username">Имя пользователя</string>
+    <string name="menu_scale_auto">Масштаб: авто</string>
+    <string name="menu_scale_value">Масштаб: %1$d%%</string>
 </resources>

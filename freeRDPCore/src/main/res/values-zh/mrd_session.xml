@@ -14,4 +14,6 @@
     <string name="session_notification_title">已连接：%1$s</string>
     <string name="session_notification_title_many">已打开的会话：%1$d</string>
     <string name="session_notification_text">会话将在后台保持连接。点按即可返回。</string>
+    <string name="menu_scale_auto">缩放：自动</string>
+    <string name="menu_scale_value">缩放：%1$d%%</string>
 </resources>

@@ -14,4 +14,6 @@
     <string name="session_notification_title">Verbunden: %1$s</string>
     <string name="session_notification_title_many">Offene Sitzungen: %1$d</string>
     <string name="session_notification_text">Die Sitzung bleibt im Hintergrund verbunden. Zum Zurückkehren tippen.</string>
+    <string name="menu_scale_auto">Skalierung: automatisch</string>
+    <string name="menu_scale_value">Skalierung: %1$d%%</string>
 </resources>

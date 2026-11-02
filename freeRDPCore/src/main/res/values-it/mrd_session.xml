@@ -30,4 +30,6 @@
     <string name="settings_domain">Dominio</string>
     <string name="settings_password">Password</string>
     <string name="settings_username">Nome utente</string>
+    <string name="menu_scale_auto">Scala: automatica</string>
+    <string name="menu_scale_value">Scala: %1$d%%</string>
 </resources>

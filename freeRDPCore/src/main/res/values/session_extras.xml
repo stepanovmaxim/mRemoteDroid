@@ -4,6 +4,7 @@
     <item name="session_fit_screen" type="id" />
     <item name="session_orientation" type="id" />
     <item name="session_to_list" type="id" />
+    <item name="session_scale" type="id" />
     <string name="session_menu">Session menu</string>
     <string name="menu_mouse_pointer_on">Show mouse pointer</string>
     <string name="menu_mouse_pointer_off">Hide mouse pointer</string>
@@ -15,6 +16,8 @@
     <string name="session_notification_channel">Active RDP session</string>
     <string name="session_notification_title">Connected: %1$s</string>
     <string name="session_notification_title_many">Connected sessions: %1$d</string>
+    <string name="menu_scale_auto">Scale: auto</string>
+    <string name="menu_scale_value">Scale: %1$d%%</string>
     <string name="menu_to_list">Connection list</string>
     <string name="session_notification_text">The session stays connected in the background. Tap to return.</string>
 </resources>

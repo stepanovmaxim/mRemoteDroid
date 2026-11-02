@@ -46,8 +46,11 @@ typedef struct
 	/* a resize asked for before the server announced its capabilities */
 	UINT32 dispPendingWidth;
 	UINT32 dispPendingHeight;
+	UINT32 dispPendingDesktopScale;
+	UINT32 dispPendingDeviceScale;
 } androidContext;
 
-FREERDP_LOCAL BOOL android_send_monitor_layout(androidContext* afc, UINT32 width, UINT32 height);
+FREERDP_LOCAL BOOL android_send_monitor_layout(androidContext* afc, UINT32 width, UINT32 height,
+                                               UINT32 desktopScale, UINT32 deviceScale);
 
 #endif /* FREERDP_CLIENT_ANDROID_FREERDP_H */
