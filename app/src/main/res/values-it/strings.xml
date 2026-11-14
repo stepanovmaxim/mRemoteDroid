@@ -38,12 +38,12 @@
     <string name="cd_add_connection">Aggiungi connessione</string>
     <string name="cd_clear">Cancella</string>
     <string name="menu_new_folder">Nuova cartella</string>
-    <string name="menu_import">Importa confCons.xml</string>
+    <string name="menu_import">Importa</string>
     <string name="menu_export">Esporta confCons.xml</string>
     <string name="menu_biometric">Blocco biometrico</string>
     <string name="menu_about">Informazioni</string>
     <string name="search_hint">Cerca per nome, host, utente</string>
-    <string name="empty_list">Ancora nessuna connessione.\nAggiungine una con + o importa un file confCons.xml.</string>
+    <string name="empty_list">Nessuna connessione.\nAggiungine una con + o importa un elenco dal menu.</string>
     <string name="nothing_found">Nessun risultato.</string>
     <string name="session_open_hint">Sessione aperta, tocca per tornare</string>
     <string name="sort_name_asc">Nome A→Z</string>
@@ -80,4 +80,42 @@
     <string name="about_tap_license">Tocca per mostrare o nascondere il testo della licenza.</string>
     <string name="about_disclaimer">mRemoteDroid è un progetto indipendente. Non è affiliato al progetto mRemoteNG né approvato da esso. L\'importazione e l\'esportazione usano il formato di file confCons.xml di mRemoteNG solo per compatibilità.</string>
     <string name="about_mpl_note">Il codice del client Android di FreeRDP usato in questa app è stato modificato. Il suo codice sorgente, come quello dell\'intera app, è disponibile nel repository.</string>
+
+    <!-- 1.4.0 -->
+    <string name="menu_shared_folder">Cartella condivisa</string>
+    <string name="credentials_title">Accessi salvati</string>
+    <string name="credentials_empty">Nessun accesso salvato.\nUsa un solo accesso per molti server e modificalo in un unico punto.</string>
+    <string name="credential_add">Aggiungi accesso</string>
+    <string name="credential_edit">Modifica accesso</string>
+    <string name="credential_delete_message">L’accesso “%1$s” verrà eliminato. Le connessioni che lo usano torneranno al proprio nome utente e password.</string>
+    <string name="field_login">Accesso</string>
+    <string name="cred_own">Nome utente e password propri</string>
+    <string name="cred_inherit">Dalla cartella: %1$s</string>
+    <string name="folder_login">Accesso della cartella</string>
+    <string name="folder_login_hint">Le connessioni in “%1$s” possono usare questo accesso.</string>
+    <string name="folder_login_none">Non impostato</string>
+    <string name="folder_login_apply">Applica a tutte le connessioni interne</string>
+    <string name="field_gateway_user">Nome utente del gateway</string>
+    <string name="field_gateway_domain">Dominio del gateway</string>
+    <string name="field_gateway_password">Password del gateway</string>
+    <string name="field_gateway_password_stored">Password del gateway (salvata, lascia vuoto per mantenerla)</string>
+    <string name="hint_gateway_same">Lascia vuoto per usare l’accesso della connessione</string>
+    <string name="field_sound">Audio</string>
+    <string name="sound_off">Disattivato</string>
+    <string name="sound_device">Su questo dispositivo</string>
+    <string name="sound_server">Sul server</string>
+    <string name="field_redirect_folder">Condividi una cartella con il server</string>
+    <string name="hint_redirect_folder">Il server vedrà la cartella “mRemoteDroid” dell’app come un’unità. Aprila dal menu o dall’app File. Attiva solo per server attendibili.</string>
+    <string name="action_add_shortcut">Aggiungi alla schermata Home</string>
+    <string name="section_recent">Recenti</string>
+    <string name="msg_connection_missing">Questa connessione non esiste più.</string>
+    <string name="msg_shortcut_unsupported">Questo launcher non supporta le scorciatoie.</string>
+    <string name="msg_no_files_app">Nessuna app trovata per aprire la cartella. Usa l’app File di sistema.</string>
+    <string name="msg_import_unknown">Formato di file sconosciuto. Supportati: confCons.xml, .rdp, .rdg e CSV con colonna host.</string>
+    <string name="msg_import_too_large">Il file è troppo grande per l’importazione.</string>
+    <string name="msg_import_duplicates">Già in elenco, saltate: %1$d.</string>
+    <string name="msg_import_no_passwords">Le password protette da Windows non possono essere trasferite: inseriscile o usa un accesso salvato.</string>
+    <string name="menu_default_scale">Scala del desktop</string>
+    <string name="scale_auto">Automatica (in base alla densità dello schermo)</string>
+    <string name="default_scale_hint">Come la scala nelle impostazioni dello schermo di Windows. Vale per tutte le sessioni e si cambia anche dal menu della sessione. Richiede Windows 8.1 / Server 2012 R2 o successivi.</string>
 </resources>

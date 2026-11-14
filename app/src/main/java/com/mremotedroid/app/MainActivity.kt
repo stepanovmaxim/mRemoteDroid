@@ -18,21 +18,41 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.mremotedroid.app.data.repo.ConnectionRepository
+import com.mremotedroid.app.launch.ConnectionShortcuts
 import com.mremotedroid.app.data.settings.AppSettings
 import com.mremotedroid.app.ui.about.AboutScreen
+import com.mremotedroid.app.ui.credentials.CredentialsScreen
+import com.mremotedroid.app.ui.credentials.CredentialsViewModel
 import com.mremotedroid.app.ui.edit.EditConnectionScreen
 import com.mremotedroid.app.ui.edit.EditViewModel
 import com.mremotedroid.app.ui.theme.MRemoteTheme
 import com.mremotedroid.app.ui.tree.ConnectionTreeScreen
 import com.mremotedroid.app.ui.tree.TreeViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : FragmentActivity() {
+    /** A shortcut or an opened file, waiting for the connection list to act on it. */
+    private val incomingIntent = MutableStateFlow<Intent?>(null)
+
+    private fun accept(intent: Intent?) {
+        if (intent?.action == ConnectionShortcuts.ACTION_CONNECT || intent?.action == Intent.ACTION_VIEW) {
+            incomingIntent.value = intent
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        accept(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val repo = (application as MRemoteApp).repository
         val settings = AppSettings(this)
-        setContent { MRemoteTheme { AppNav(repo, settings) } }
+        setContent { MRemoteTheme { AppNav(repo, settings, incomingIntent) } }
+        if (savedInstanceState == null) accept(intent)
         // Not gated on savedInstanceState: after a crash Android restores the task
         // with saved state. Each report file is deleted once offered, so no repeats.
         offerReport(
@@ -76,7 +96,11 @@ class MainActivity : FragmentActivity() {
 }
 
 @Composable
-private fun AppNav(repo: ConnectionRepository, settings: AppSettings) {
+private fun AppNav(
+    repo: ConnectionRepository,
+    settings: AppSettings,
+    incomingIntent: MutableStateFlow<Intent?>
+) {
     val nav = rememberNavController()
 
     NavHost(navController = nav, startDestination = "tree") {
@@ -90,8 +114,14 @@ private fun AppNav(repo: ConnectionRepository, settings: AppSettings) {
                 onEditConnection = { nodeId ->
                     nav.navigate("edit?nodeId=$nodeId")
                 },
-                onAbout = { nav.navigate("about") }
+                onCredentials = { nav.navigate("credentials") },
+                onAbout = { nav.navigate("about") },
+                incomingIntent = incomingIntent
             )
+        }
+        composable("credentials") {
+            val vm: CredentialsViewModel = viewModel(factory = CredentialsViewModel.Factory(repo))
+            CredentialsScreen(vm = vm, onBack = { nav.popBackStack() })
         }
         composable("about") {
             AboutScreen(onBack = { nav.popBackStack() })

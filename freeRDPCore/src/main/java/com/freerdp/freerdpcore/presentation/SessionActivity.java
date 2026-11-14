@@ -155,8 +155,6 @@ public class SessionActivity extends AppCompatActivity
 
 	// Windows display scale for the session (like 150% in Windows display settings), so
 	// dense screens (Fold, tablets) don't show a tiny desktop. 0 = automatic.
-	private static final String PREF_SCALE = "desktop_scale";
-	private static final int[] SCALE_OPTIONS = { 0, 100, 125, 150, 175, 200, 250 };
 	// pixels per inch of a comfortable Windows UI on a hand-held screen
 	private static final float COMFORT_DPI = 224f;
 	private static final int MIN_LOGICAL_LONG = 1024;
@@ -165,7 +163,7 @@ public class SessionActivity extends AppCompatActivity
 
 	private int scalePreference()
 	{
-		return getSharedPreferences("session_ui", MODE_PRIVATE).getInt(PREF_SCALE, 0);
+		return SessionIntents.getDesktopScale(this);
 	}
 
 	/** Scale in percent for a remote desktop of this size in pixels (steps of 25). */
@@ -386,6 +384,11 @@ public class SessionActivity extends AppCompatActivity
 				    if (modifiersKeyboardView != null && !extKeyboardVisible)
 					    modifiersKeyboardView.setVisibility(View.GONE);
 			    }
+			    // Focus returning to the session view (after the "Connecting..." dialog,
+			    // reconnecting, switching windows) can bring the IME up on its own: the
+			    // view reports itself as a text editor. Only our menu may open it.
+			    if (imeVisible && !sysKeyboardVisible)
+				    setSoftInputState(false);
 			    imeShown = imeVisible;
 			    return WindowInsetsCompat.CONSUMED;
 		    });
@@ -1368,15 +1371,13 @@ public class SessionActivity extends AppCompatActivity
 		else if (itemId == R.id.session_scale)
 		{
 			// auto -> 100% -> ... -> 250% -> auto; applied live where the server allows it
+			int[] options = SessionIntents.SCALE_OPTIONS;
 			int next = 0;
 			int current = scalePreference();
-			for (int i = 0; i < SCALE_OPTIONS.length; i++)
-				if (SCALE_OPTIONS[i] == current)
-					next = SCALE_OPTIONS[(i + 1) % SCALE_OPTIONS.length];
-			getSharedPreferences("session_ui", MODE_PRIVATE)
-			    .edit()
-			    .putInt(PREF_SCALE, next)
-			    .apply();
+			for (int i = 0; i < options.length; i++)
+				if (options[i] == current)
+					next = options[(i + 1) % options.length];
+			SessionIntents.setDesktopScale(this, next);
 			Toast.makeText(this, scaleLabel(), Toast.LENGTH_SHORT).show();
 			scheduleRemoteResize(REMOTE_RESIZE_DELAY_MS);
 		}
@@ -2194,8 +2195,13 @@ public class SessionActivity extends AppCompatActivity
 
 			// bind session
 			bindSession();
-			// the window may differ from the size we connected with (e.g. a portrait
-			// DeX window); give the server time to open the Display Control channel
+			// The window may differ from the size we connected with (e.g. a portrait
+			// DeX window), and a server that reconnects us to an existing session keeps
+			// that session's old scale. Send the layout once in any case, after the
+			// server has had time to open the Display Control channel.
+			lastRequestedWidth = -1;
+			lastRequestedHeight = -1;
+			lastRequestedScale = -1;
 			scheduleRemoteResize(2500);
 			if (!activityVisible)
 				updateSuppressOutput();

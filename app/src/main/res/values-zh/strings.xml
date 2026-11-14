@@ -38,12 +38,12 @@
     <string name="cd_add_connection">添加连接</string>
     <string name="cd_clear">清除</string>
     <string name="menu_new_folder">新建文件夹</string>
-    <string name="menu_import">导入 confCons.xml</string>
+    <string name="menu_import">导入</string>
     <string name="menu_export">导出 confCons.xml</string>
     <string name="menu_biometric">生物识别锁</string>
     <string name="menu_about">关于</string>
     <string name="search_hint">按名称、主机、用户搜索</string>
-    <string name="empty_list">还没有连接。\n点按 + 添加，或导入 confCons.xml 文件。</string>
+    <string name="empty_list">暂无连接。\n点击 + 添加，或从菜单导入列表。</string>
     <string name="nothing_found">未找到结果。</string>
     <string name="session_open_hint">会话已打开，点按即可返回</string>
     <string name="sort_name_asc">名称 A→Z</string>
@@ -80,4 +80,42 @@
     <string name="about_tap_license">点按可显示或隐藏许可文本。</string>
     <string name="about_disclaimer">mRemoteDroid 是一个独立项目，与 mRemoteNG 项目无关，也未获得其认可。导入和导出功能仅出于兼容性目的使用 mRemoteNG 的 confCons.xml 文件格式。</string>
     <string name="about_mpl_note">本应用中使用的 FreeRDP Android 客户端代码已被修改。其源代码与整个应用的源代码一样，可在代码仓库中获取。</string>
+
+    <!-- 1.4.0 -->
+    <string name="menu_shared_folder">共享文件夹</string>
+    <string name="credentials_title">已保存的登录信息</string>
+    <string name="credentials_empty">暂无已保存的登录信息。\n可在多台服务器上使用同一登录信息，并在一处统一修改。</string>
+    <string name="credential_add">添加登录信息</string>
+    <string name="credential_edit">编辑登录信息</string>
+    <string name="credential_delete_message">将删除登录信息“%1$s”。使用它的连接将恢复为各自的用户名和密码。</string>
+    <string name="field_login">登录信息</string>
+    <string name="cred_own">单独的用户名和密码</string>
+    <string name="cred_inherit">来自文件夹：%1$s</string>
+    <string name="folder_login">文件夹登录信息</string>
+    <string name="folder_login_hint">“%1$s”中的连接可以使用此登录信息。</string>
+    <string name="folder_login_none">未设置</string>
+    <string name="folder_login_apply">应用于其中的所有连接</string>
+    <string name="field_gateway_user">网关用户名</string>
+    <string name="field_gateway_domain">网关域</string>
+    <string name="field_gateway_password">网关密码</string>
+    <string name="field_gateway_password_stored">网关密码（已保存，留空则保持不变）</string>
+    <string name="hint_gateway_same">留空则使用连接的登录信息</string>
+    <string name="field_sound">声音</string>
+    <string name="sound_off">关闭</string>
+    <string name="sound_device">在此设备上</string>
+    <string name="sound_server">在服务器上</string>
+    <string name="field_redirect_folder">与服务器共享文件夹</string>
+    <string name="hint_redirect_folder">服务器会将应用的“mRemoteDroid”文件夹视为驱动器。可从菜单或“文件”应用打开。请仅对信任的服务器启用。</string>
+    <string name="action_add_shortcut">添加到主屏幕</string>
+    <string name="section_recent">最近使用</string>
+    <string name="msg_connection_missing">此连接已不存在。</string>
+    <string name="msg_shortcut_unsupported">此桌面不支持快捷方式。</string>
+    <string name="msg_no_files_app">未找到可打开此文件夹的应用。请使用系统“文件”应用。</string>
+    <string name="msg_import_unknown">未知文件格式。支持 confCons.xml、.rdp、.rdg 以及含主机列的 CSV。</string>
+    <string name="msg_import_too_large">文件过大，无法导入。</string>
+    <string name="msg_import_duplicates">已在列表中，已跳过：%1$d。</string>
+    <string name="msg_import_no_passwords">受 Windows 保护的密码无法迁移：请手动输入或使用已保存的登录信息。</string>
+    <string name="menu_default_scale">桌面缩放</string>
+    <string name="scale_auto">自动（按屏幕密度）</string>
+    <string name="default_scale_hint">与 Windows 显示设置中的缩放相同。适用于所有会话，也可在会话菜单中更改。需要 Windows 8.1 / Server 2012 R2 或更高版本。</string>
 </resources>

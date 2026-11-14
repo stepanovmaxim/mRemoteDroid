@@ -1,6 +1,8 @@
 package com.mremotedroid.app.data.repo
 
 import com.mremotedroid.app.data.crypto.CredentialCrypto
+import com.mremotedroid.app.data.db.CredentialDao
+import com.mremotedroid.app.data.db.CredentialEntity
 import com.mremotedroid.app.data.db.NodeDao
 import com.mremotedroid.app.data.db.NodeEntity
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +18,20 @@ data class TreeRow(
     val hasChildren: Boolean
 )
 
-class ConnectionRepository(private val dao: NodeDao) {
+/** The login a connection actually uses, with passwords still encrypted. */
+data class ResolvedLogin(
+    val username: String,
+    val domain: String,
+    val credentialBlob: String?,
+    val gatewayCredentialBlob: String?
+) {
+    val hasStoredPassword: Boolean get() = credentialBlob != null || gatewayCredentialBlob != null
+}
+
+class ConnectionRepository(
+    private val dao: NodeDao,
+    private val credentials: CredentialDao
+) {
 
     fun observeAll(): Flow<List<NodeEntity>> = dao.observeAll()
 
@@ -38,6 +53,12 @@ class ConnectionRepository(private val dao: NodeDao) {
         fullscreen: Boolean,
         consoleSession: Boolean,
         gatewayHostname: String,
+        gatewayUsername: String,
+        gatewayDomain: String,
+        gatewayPlainPassword: String?,
+        soundMode: Int,
+        redirectFolder: Boolean,
+        credentialId: String?,
         description: String
     ) {
         // Re-encrypt only when the user entered a new password; otherwise keep the old blob.
@@ -45,6 +66,11 @@ class ConnectionRepository(private val dao: NodeDao) {
             plainPassword == null -> existing?.credentialBlob
             plainPassword.isEmpty() -> null
             else -> CredentialCrypto.encrypt(plainPassword)
+        }
+        val gatewayBlob = when {
+            gatewayPlainPassword == null -> existing?.gatewayCredentialBlob
+            gatewayPlainPassword.isEmpty() -> null
+            else -> CredentialCrypto.encrypt(gatewayPlainPassword)
         }
         val node = (existing ?: NodeEntity(
             id = UUID.randomUUID().toString(),
@@ -64,6 +90,12 @@ class ConnectionRepository(private val dao: NodeDao) {
             fullscreen = fullscreen,
             consoleSession = consoleSession,
             gatewayHostname = gatewayHostname,
+            gatewayUsername = gatewayUsername,
+            gatewayDomain = gatewayDomain,
+            gatewayCredentialBlob = gatewayBlob,
+            soundMode = soundMode,
+            redirectFolder = redirectFolder,
+            credentialId = credentialId,
             description = description
         )
         dao.upsert(node)
@@ -99,7 +131,142 @@ class ConnectionRepository(private val dao: NodeDao) {
         dao.deleteByIds(toDelete)
     }
 
-    fun decryptPassword(node: NodeEntity): String = CredentialCrypto.decrypt(node.credentialBlob)
+    fun decrypt(blob: String?): String = CredentialCrypto.decrypt(blob)
+
+    // --- saved logins ---
+
+    fun observeCredentials(): Flow<List<CredentialEntity>> = credentials.observeAll()
+
+    /** [plainPassword]: null = keep the stored one, "" = clear it. */
+    suspend fun saveCredential(
+        existing: CredentialEntity?,
+        name: String,
+        username: String,
+        domain: String,
+        plainPassword: String?
+    ) {
+        val blob = when {
+            plainPassword == null -> existing?.credentialBlob
+            plainPassword.isEmpty() -> null
+            else -> CredentialCrypto.encrypt(plainPassword)
+        }
+        credentials.upsert(
+            CredentialEntity(
+                id = existing?.id ?: UUID.randomUUID().toString(),
+                name = name,
+                username = username,
+                domain = domain,
+                credentialBlob = blob
+            )
+        )
+    }
+
+    suspend fun deleteCredential(id: String) {
+        dao.clearCredential(id)
+        credentials.deleteById(id)
+    }
+
+    suspend fun setCredential(nodeId: String, credentialId: String?) = dao.setCredential(nodeId, credentialId)
+
+    /** The login a connection inside [folderId] would inherit, if any. */
+    suspend fun inheritedCredential(folderId: String?): CredentialEntity? =
+        folderCredential(folderId, dao.getAll().associateBy { it.id }, credentials.getAll().associateBy { it.id })
+
+    private fun folderCredential(
+        folderId: String?,
+        nodes: Map<String, NodeEntity>,
+        saved: Map<String, CredentialEntity>
+    ): CredentialEntity? {
+        val seen = HashSet<String>()
+        var current = folderId?.let(nodes::get)
+        while (current != null && seen.add(current.id)) {
+            current.credentialId?.let(saved::get)?.let { return it }
+            current = current.parentId?.let(nodes::get)
+        }
+        return null
+    }
+
+    suspend fun resolveLogin(node: NodeEntity): ResolvedLogin =
+        resolveLogin(node, dao.getAll().associateBy { it.id }, credentials.getAll().associateBy { it.id })
+
+    private fun resolveLogin(
+        node: NodeEntity,
+        nodes: Map<String, NodeEntity>,
+        saved: Map<String, CredentialEntity>
+    ): ResolvedLogin {
+        val credential = when (node.credentialId) {
+            null -> null
+            NodeEntity.CREDENTIAL_INHERIT -> folderCredential(node.parentId, nodes, saved)
+            else -> saved[node.credentialId]
+        }
+        return ResolvedLogin(
+            username = credential?.username ?: node.username,
+            domain = credential?.domain ?: node.domain,
+            credentialBlob = if (credential != null) credential.credentialBlob else node.credentialBlob,
+            gatewayCredentialBlob = node.gatewayCredentialBlob
+        )
+    }
+
+    /** Sets a folder's login; [applyToChildren] switches every connection inside to inherit it. */
+    suspend fun setFolderCredential(folderId: String, credentialId: String?, applyToChildren: Boolean) {
+        dao.setCredential(folderId, credentialId)
+        if (!applyToChildren) return
+        val byParent = dao.getAll().groupBy { it.parentId }
+        fun walk(parent: String): List<NodeEntity> =
+            byParent[parent].orEmpty().flatMap { if (it.nodeType == NodeEntity.TYPE_FOLDER) walk(it.id) else listOf(it) }
+        walk(folderId).forEach { dao.setCredential(it.id, NodeEntity.CREDENTIAL_INHERIT) }
+    }
+
+    data class MergeResult(val connections: Int, val folders: Int, val duplicates: Int)
+
+    /**
+     * Adds imported nodes without duplicating: folders with the same place and name are
+     * reused, connections already in the list are skipped. Parents must precede children.
+     */
+    suspend fun mergeImported(imported: List<NodeEntity>): MergeResult {
+        fun key(n: NodeEntity) = "${n.hostname.lowercase()}|${n.port}|${n.username.lowercase()}"
+        val existing = dao.getAll()
+        val folders = existing.filter { it.nodeType == NodeEntity.TYPE_FOLDER }
+            .associateTo(HashMap()) { (it.parentId to it.name.lowercase()) to it.id }
+        val connections = existing.filter { it.nodeType == NodeEntity.TYPE_CONNECTION }.mapTo(HashSet(), ::key)
+        val ids = HashMap<String, String>()
+        val added = ArrayList<NodeEntity>()
+        var duplicates = 0
+        imported.forEach { node ->
+            val parent = node.parentId?.let(ids::get)
+            if (node.nodeType == NodeEntity.TYPE_FOLDER) {
+                val folderKey = parent to node.name.lowercase()
+                val known = folders[folderKey]
+                if (known != null) {
+                    ids[node.id] = known
+                } else {
+                    folders[folderKey] = node.id
+                    ids[node.id] = node.id
+                    added += node.copy(parentId = parent)
+                }
+            } else if (connections.add(key(node))) {
+                added += node.copy(parentId = parent)
+            } else {
+                duplicates++
+            }
+        }
+        dao.upsertAll(added)
+        return MergeResult(
+            connections = added.count { it.nodeType == NodeEntity.TYPE_CONNECTION },
+            folders = added.count { it.nodeType == NodeEntity.TYPE_FOLDER },
+            duplicates = duplicates
+        )
+    }
+
+    // --- recent connections ---
+
+    fun observeRecent(limit: Int): Flow<List<NodeEntity>> = dao.observeRecent(limit)
+
+    suspend fun recent(limit: Int): List<NodeEntity> = dao.getRecent(limit)
+
+    suspend fun markConnected(id: String) = dao.setLastConnected(id, System.currentTimeMillis())
+
+    suspend fun allNodes(): List<NodeEntity> = dao.getAll()
 
     /** Replaces the entire tree (used by import-with-replace). */
     suspend fun replaceAll(nodes: List<NodeEntity>) {
@@ -113,10 +280,19 @@ class ConnectionRepository(private val dao: NodeDao) {
 
     /** Builds a mRemoteNG confCons.xml from the whole tree, re-encrypting passwords. */
     suspend fun buildExportXml(filePassword: String): String {
-        val nodes = dao.getAll()
+        // confCons.xml has no saved logins: write each connection's effective login.
+        val all = dao.getAll()
+        val byId = all.associateBy { it.id }
+        val saved = credentials.getAll().associateBy { it.id }
+        val logins = all.associate { it.id to resolveLogin(it, byId, saved) }
+        val nodes = all.map { n ->
+            val login = logins.getValue(n.id)
+            n.copy(username = login.username, domain = login.domain)
+        }
         return com.mremotedroid.app.data.importer.MRemoteNgExporter.export(
             nodes = nodes,
-            plaintextPasswordOf = { CredentialCrypto.decrypt(it.credentialBlob) },
+            plaintextPasswordOf = { CredentialCrypto.decrypt(logins[it.id]?.credentialBlob) },
+            gatewayPasswordOf = { CredentialCrypto.decrypt(it.gatewayCredentialBlob) },
             filePassword = filePassword.ifBlank { com.mremotedroid.app.data.importer.MRemoteNgCrypto.DEFAULT_FILE_PASSWORD }
         )
     }

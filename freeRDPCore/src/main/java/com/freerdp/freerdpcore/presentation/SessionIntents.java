@@ -17,6 +17,26 @@ public final class SessionIntents
 	{
 	}
 
+	/** Desktop scale choices in percent; 0 = automatic by screen density. */
+	public static final int[] SCALE_OPTIONS = { 0, 100, 125, 150, 175, 200, 250 };
+
+	private static final String PREFS = "session_ui";
+	private static final String PREF_SCALE = "desktop_scale";
+
+	/** The desktop scale used for every session, also changed from the session menu. */
+	public static int getDesktopScale(Context context)
+	{
+		return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(PREF_SCALE, 0);
+	}
+
+	public static void setDesktopScale(Context context, int percent)
+	{
+		context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+		    .edit()
+		    .putInt(PREF_SCALE, percent)
+		    .apply();
+	}
+
 	/**
 	 * Opens a session window for the connection identified by {@code tag} (a non-secret
 	 * URI), or brings its existing window to the front.

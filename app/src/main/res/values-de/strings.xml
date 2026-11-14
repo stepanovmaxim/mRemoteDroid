@@ -38,12 +38,12 @@
     <string name="cd_add_connection">Verbindung hinzufügen</string>
     <string name="cd_clear">Löschen</string>
     <string name="menu_new_folder">Neuer Ordner</string>
-    <string name="menu_import">confCons.xml importieren</string>
+    <string name="menu_import">Importieren</string>
     <string name="menu_export">confCons.xml exportieren</string>
     <string name="menu_biometric">Biometrische Sperre</string>
     <string name="menu_about">Über</string>
     <string name="search_hint">Nach Name, Host, Benutzer suchen</string>
-    <string name="empty_list">Noch keine Verbindungen.\nFügen Sie eine mit + hinzu oder importieren Sie eine confCons.xml-Datei.</string>
+    <string name="empty_list">Noch keine Verbindungen.\nMit + hinzufügen oder eine Liste über das Menü importieren.</string>
     <string name="nothing_found">Nichts gefunden.</string>
     <string name="session_open_hint">Sitzung geöffnet, zum Zurückkehren tippen</string>
     <string name="sort_name_asc">Name A→Z</string>
@@ -80,4 +80,42 @@
     <string name="about_tap_license">Tippen, um den Lizenztext ein- oder auszublenden.</string>
     <string name="about_disclaimer">mRemoteDroid ist ein unabhängiges Projekt. Es steht in keiner Verbindung zum mRemoteNG-Projekt und wird von diesem nicht unterstützt. Import und Export verwenden das Dateiformat confCons.xml von mRemoteNG ausschließlich zur Kompatibilität.</string>
     <string name="about_mpl_note">Der in dieser App verwendete Code des FreeRDP-Android-Clients wurde geändert. Sein Quellcode ist, wie der Quellcode der gesamten App, im Repository verfügbar.</string>
+
+    <!-- 1.4.0 -->
+    <string name="menu_shared_folder">Freigegebener Ordner</string>
+    <string name="credentials_title">Gespeicherte Anmeldungen</string>
+    <string name="credentials_empty">Noch keine gespeicherten Anmeldungen.\nVerwenden Sie eine Anmeldung für viele Server und ändern Sie sie an einer Stelle.</string>
+    <string name="credential_add">Anmeldung hinzufügen</string>
+    <string name="credential_edit">Anmeldung bearbeiten</string>
+    <string name="credential_delete_message">Die Anmeldung „%1$s“ wird gelöscht. Verbindungen, die sie verwenden, nutzen wieder ihren eigenen Benutzernamen und ihr eigenes Passwort.</string>
+    <string name="field_login">Anmeldung</string>
+    <string name="cred_own">Eigener Benutzername und Passwort</string>
+    <string name="cred_inherit">Aus Ordner: %1$s</string>
+    <string name="folder_login">Ordner-Anmeldung</string>
+    <string name="folder_login_hint">Verbindungen in „%1$s“ können diese Anmeldung verwenden.</string>
+    <string name="folder_login_none">Nicht festgelegt</string>
+    <string name="folder_login_apply">Auf alle Verbindungen darin anwenden</string>
+    <string name="field_gateway_user">Gateway-Benutzername</string>
+    <string name="field_gateway_domain">Gateway-Domäne</string>
+    <string name="field_gateway_password">Gateway-Passwort</string>
+    <string name="field_gateway_password_stored">Gateway-Passwort (gespeichert, leer lassen, um es zu behalten)</string>
+    <string name="hint_gateway_same">Leer lassen, um die Anmeldung der Verbindung zu verwenden</string>
+    <string name="field_sound">Ton</string>
+    <string name="sound_off">Aus</string>
+    <string name="sound_device">Auf diesem Gerät</string>
+    <string name="sound_server">Auf dem Server</string>
+    <string name="field_redirect_folder">Ordner für den Server freigeben</string>
+    <string name="hint_redirect_folder">Der Server sieht den App-Ordner „mRemoteDroid“ als Laufwerk. Sie öffnen ihn über das Menü oder die Dateien-App. Nur für vertrauenswürdige Server aktivieren.</string>
+    <string name="action_add_shortcut">Zum Startbildschirm</string>
+    <string name="section_recent">Zuletzt verwendet</string>
+    <string name="msg_connection_missing">Diese Verbindung existiert nicht mehr.</string>
+    <string name="msg_shortcut_unsupported">Dieser Launcher unterstützt keine Verknüpfungen.</string>
+    <string name="msg_no_files_app">Keine App zum Öffnen des Ordners gefunden. Verwenden Sie die System-App „Dateien“.</string>
+    <string name="msg_import_unknown">Unbekanntes Dateiformat. Unterstützt: confCons.xml, .rdp, .rdg und CSV mit einer Host-Spalte.</string>
+    <string name="msg_import_too_large">Die Datei ist zu groß für den Import.</string>
+    <string name="msg_import_duplicates">Bereits in der Liste, übersprungen: %1$d.</string>
+    <string name="msg_import_no_passwords">Durch Windows geschützte Passwörter können nicht übertragen werden: Geben Sie sie ein oder verwenden Sie eine gespeicherte Anmeldung.</string>
+    <string name="menu_default_scale">Desktop-Skalierung</string>
+    <string name="scale_auto">Automatisch (nach Bildschirmdichte)</string>
+    <string name="default_scale_hint">Wie die Skalierung in den Windows-Anzeigeeinstellungen. Gilt für alle Sitzungen und lässt sich auch im Sitzungsmenü ändern. Erfordert Windows 8.1 / Server 2012 R2 oder neuer.</string>
 </resources>

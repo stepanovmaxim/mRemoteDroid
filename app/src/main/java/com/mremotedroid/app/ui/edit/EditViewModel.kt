@@ -3,6 +3,7 @@ package com.mremotedroid.app.ui.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.mremotedroid.app.data.db.CredentialEntity
 import com.mremotedroid.app.data.db.NodeEntity
 import com.mremotedroid.app.data.model.Protocol
 import com.mremotedroid.app.data.repo.ConnectionRepository
@@ -26,8 +27,24 @@ data class EditState(
     val fullscreen: Boolean = true,
     val consoleSession: Boolean = false,
     val gatewayHostname: String = "",
-    val description: String = ""
-)
+    val gatewayUsername: String = "",
+    val gatewayDomain: String = "",
+    /** null = unchanged, "" = cleared, other = new password */
+    val gatewayPassword: String? = null,
+    val hasStoredGatewayPassword: Boolean = false,
+    val soundMode: Int = NodeEntity.SOUND_OFF,
+    val redirectFolder: Boolean = false,
+    val description: String = "",
+    /** See [NodeEntity.credentialId]. */
+    val credentialId: String? = null,
+    val credentials: List<CredentialEntity> = emptyList(),
+    /** Name of the login the parent folders provide, if any. */
+    val inheritedLogin: String? = null
+) {
+    /** Whether this connection's own username and password are the ones used. */
+    val usesOwnLogin: Boolean
+        get() = credentialId == null || (credentialId == NodeEntity.CREDENTIAL_INHERIT && inheritedLogin == null)
+}
 
 class EditViewModel(
     private val repo: ConnectionRepository,
@@ -43,6 +60,7 @@ class EditViewModel(
         viewModelScope.launch {
             val node = nodeId?.let { repo.getById(it) }
             existing = node
+            val inherited = repo.inheritedCredential(node?.parentId ?: parentId)?.name
             _state.value = if (node != null) {
                 EditState(
                     loading = false,
@@ -59,11 +77,24 @@ class EditViewModel(
                     fullscreen = node.fullscreen,
                     consoleSession = node.consoleSession,
                     gatewayHostname = node.gatewayHostname,
-                    description = node.description
+                    gatewayUsername = node.gatewayUsername,
+                    gatewayDomain = node.gatewayDomain,
+                    hasStoredGatewayPassword = node.gatewayCredentialBlob != null,
+                    soundMode = node.soundMode,
+                    redirectFolder = node.redirectFolder,
+                    description = node.description,
+                    credentialId = node.credentialId,
+                    inheritedLogin = inherited
                 )
             } else {
-                EditState(loading = false, isNew = true)
+                EditState(
+                    loading = false,
+                    isNew = true,
+                    credentialId = if (inherited != null) NodeEntity.CREDENTIAL_INHERIT else null,
+                    inheritedLogin = inherited
+                )
             }
+            repo.observeCredentials().collect { list -> update { it.copy(credentials = list) } }
         }
     }
 
@@ -85,6 +116,12 @@ class EditViewModel(
             fullscreen = s.fullscreen,
             consoleSession = s.consoleSession,
             gatewayHostname = s.gatewayHostname.trim(),
+            gatewayUsername = s.gatewayUsername.trim(),
+            gatewayDomain = s.gatewayDomain.trim(),
+            gatewayPlainPassword = s.gatewayPassword,
+            soundMode = s.soundMode,
+            redirectFolder = s.redirectFolder,
+            credentialId = s.credentialId,
             description = s.description.trim()
         )
         onDone()

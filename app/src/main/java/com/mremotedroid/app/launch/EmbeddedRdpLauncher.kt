@@ -30,7 +30,10 @@ object EmbeddedRdpLauncher {
         return true
     }
 
-    fun launch(context: Context, node: NodeEntity, plainPassword: String?): Result {
+    /** The login to use, already decrypted. */
+    class Login(val username: String, val domain: String, val password: String?, val gatewayPassword: String?)
+
+    fun launch(context: Context, node: NodeEntity, login: Login): Result {
         if (reopen(context, node)) return Result.Ok
         if (ActiveSessions.count() >= GlobalApp.MAX_SESSIONS) {
             return Result.Error(context.getString(R.string.msg_max_sessions, GlobalApp.MAX_SESSIONS))
@@ -40,7 +43,7 @@ object EmbeddedRdpLauncher {
             // the screen and fits it to the current orientation.
             val port = if (node.port in 1..65535) node.port else 3389
             val authority = buildString {
-                if (node.username.isNotBlank()) append(enc(node.username)).append("@")
+                if (login.username.isNotBlank()) append(enc(login.username)).append("@")
                 append(node.hostname)
                 append(":").append(port)
             }
@@ -52,11 +55,20 @@ object EmbeddedRdpLauncher {
                 .appendQueryParameter("cert", "ignore")
                 .appendQueryParameter("clipboard", "")           // -> /clipboard
 
-            if (node.domain.isNotBlank()) builder.appendQueryParameter("d", node.domain)
-            if (!plainPassword.isNullOrEmpty()) builder.appendQueryParameter("p", plainPassword)
+            if (login.domain.isNotBlank()) builder.appendQueryParameter("d", login.domain)
+            if (!login.password.isNullOrEmpty()) builder.appendQueryParameter("p", login.password)
             if (node.consoleSession) builder.appendQueryParameter("admin", "") // -> /admin
             if (node.gatewayHostname.isNotBlank()) {
-                builder.appendQueryParameter("g", node.gatewayHostname)
+                builder.appendQueryParameter("gateway", gatewayOptions(node, login.gatewayPassword))
+            }
+            when (node.soundMode) {
+                NodeEntity.SOUND_DEVICE -> builder.appendQueryParameter("sound", "")
+                NodeEntity.SOUND_SERVER -> builder.appendQueryParameter("audio-mode", "1")
+            }
+            if (node.redirectFolder) {
+                SharedFiles.directory(context)?.let {
+                    builder.appendQueryParameter("drive", "${SharedFiles.DRIVE_NAME},${it.path}")
+                }
             }
 
             // Each session gets its own window (task / Recents card). The connection URI
@@ -67,6 +79,32 @@ object EmbeddedRdpLauncher {
             Result.Ok
         } catch (e: Exception) {
             Result.Error(context.getString(R.string.msg_launch_failed))
+        }
+    }
+
+    /** Value of FreeRDP's /gateway option; no login means the connection's own is reused. */
+    private fun gatewayOptions(node: NodeEntity, password: String?): String {
+        val options = mutableListOf(quoted("g:", node.gatewayHostname.trim()))
+        if (node.gatewayUsername.isNotBlank()) {
+            options += quoted("u:", node.gatewayUsername)
+            if (node.gatewayDomain.isNotBlank()) options += quoted("d:", node.gatewayDomain)
+            if (!password.isNullOrEmpty()) options += quoted("p:", password)
+        }
+        options += "usage-method:direct"
+        return options.filterNotNull().joinToString(",")
+    }
+
+    /**
+     * Quotes one comma-separated element the way FreeRDP's parser expects. A value holding
+     * both quote characters cannot be written and is left out: FreeRDP then asks for it.
+     */
+    private fun quoted(prefix: String, value: String): String? {
+        val element = prefix + value
+        return when {
+            element.none { it == ',' || it == '"' || it == '\'' } -> element
+            '"' !in element -> "\"$element\""
+            '\'' !in element -> "'$element'"
+            else -> null
         }
     }
 

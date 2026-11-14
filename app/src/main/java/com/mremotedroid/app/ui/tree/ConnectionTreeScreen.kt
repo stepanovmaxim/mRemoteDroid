@@ -1,6 +1,9 @@
 package com.mremotedroid.app.ui.tree
 
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.provider.DocumentsContract
 import com.mremotedroid.app.R
 import androidx.compose.ui.res.stringResource
 import android.widget.Toast
@@ -24,7 +27,10 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.AddToHomeScreen
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
@@ -40,6 +46,7 @@ import androidx.compose.material.icons.filled.SortByAlpha
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +65,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,7 +78,14 @@ import com.mremotedroid.app.data.model.Protocol
 import androidx.compose.material3.Button
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import com.mremotedroid.app.data.db.CredentialEntity
+import com.mremotedroid.app.data.repo.ResolvedLogin
 import com.mremotedroid.app.launch.ActiveSessions
+import com.mremotedroid.app.launch.ConnectionShortcuts
+import com.mremotedroid.app.launch.SharedFiles
+import com.freerdp.freerdpcore.presentation.SessionIntents
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import com.mremotedroid.app.launch.EmbeddedRdpLauncher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -84,7 +99,9 @@ fun ConnectionTreeScreen(
     vm: TreeViewModel,
     onAddConnection: (parentId: String?) -> Unit,
     onEditConnection: (nodeId: String) -> Unit,
-    onAbout: () -> Unit
+    onCredentials: () -> Unit,
+    onAbout: () -> Unit,
+    incomingIntent: MutableStateFlow<Intent?>
 ) {
     val context = LocalContext.current
     val activity = context as? FragmentActivity
@@ -93,24 +110,26 @@ fun ConnectionTreeScreen(
     val query by vm.query.collectAsStateWithLifecycle()
     val sort by vm.sort.collectAsStateWithLifecycle()
     val openSessions by ActiveSessions.nodeIds.collectAsStateWithLifecycle()
+    val recent by vm.recent.collectAsStateWithLifecycle()
+    val credentials by vm.credentials.collectAsStateWithLifecycle()
+    val pendingConfCons by vm.pendingConfCons.collectAsStateWithLifecycle()
+    val incoming by incomingIntent.collectAsStateWithLifecycle()
+    val scope = rememberCoroutineScope()
 
     var overflowOpen by remember { mutableStateOf(false) }
     var sortMenuOpen by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
-    var showImportDialog by remember { mutableStateOf(false) }
+    var folderLoginFor by remember { mutableStateOf<NodeEntity?>(null) }
+    var resultText by remember { mutableStateOf<String?>(null) }
+    var showScaleDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
-    var pendingImport by remember { mutableStateOf<Pair<String, Boolean>?>(null) }
     var pendingExportPassword by remember { mutableStateOf<String?>(null) }
     var biometricOn by remember { mutableStateOf(vm.biometricLockEnabled) }
 
-    val openDocument = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        val opts = pendingImport
-        if (uri != null && opts != null) {
-            context.contentResolver.openInputStream(uri)?.let { vm.import(it, opts.first, opts.second) }
-        }
-        pendingImport = null
+    val openDocuments = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) vm.importFiles(context.contentResolver, uris)
     }
 
     val createDocument = rememberLauncherForActivityResult(
@@ -125,32 +144,75 @@ fun ConnectionTreeScreen(
 
     LaunchedEffect(message) {
         message?.let {
-            Toast.makeText(context, it.toText(context), Toast.LENGTH_LONG).show()
+            // Android cuts toasts to two lines, too short for import summaries.
+            if (it is TreeMessage.Exported) Toast.makeText(context, it.toText(context), Toast.LENGTH_LONG).show()
+            else resultText = it.toText(context)
             vm.clearMessage()
         }
     }
 
     // Sessions always run in the embedded FreeRDP engine.
-    fun connect(node: NodeEntity) {
-        val res = EmbeddedRdpLauncher.launch(context, node, vm.passwordFor(node))
+    fun connect(node: NodeEntity, login: ResolvedLogin) {
+        val res = EmbeddedRdpLauncher.launch(context, node, vm.decrypted(login))
         if (res is EmbeddedRdpLauncher.Result.Error) {
             Toast.makeText(context, res.message, Toast.LENGTH_LONG).show()
+        } else {
+            vm.markConnected(context, node)
         }
     }
 
     fun connectWithGate(node: NodeEntity) {
         // an open session needs no password: just switch to its window
         if (EmbeddedRdpLauncher.reopen(context, node)) return
-        if (vm.needsUnlock(node) && activity != null) {
-            BiometricGate.authenticate(
-                activity = activity,
-                title = context.getString(R.string.unlock_title),
-                subtitle = node.name,
-                onSuccess = { vm.markUnlocked(); connect(node) },
-                onFailure = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+        scope.launch {
+            val login = vm.loginFor(node)
+            if (vm.needsUnlock(login) && activity != null) {
+                BiometricGate.authenticate(
+                    activity = activity,
+                    title = context.getString(R.string.unlock_title),
+                    subtitle = node.name,
+                    onSuccess = { vm.markUnlocked(); connect(node, login) },
+                    onFailure = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+                )
+            } else {
+                connect(node, login)
+            }
+        }
+    }
+
+    LaunchedEffect(incoming) {
+        val intent = incoming ?: return@LaunchedEffect
+        incomingIntent.value = null
+        when (intent.action) {
+            ConnectionShortcuts.ACTION_CONNECT -> {
+                val node = intent.getStringExtra(ConnectionShortcuts.EXTRA_NODE_ID)?.let { vm.nodeById(it) }
+                if (node != null) connectWithGate(node)
+                else Toast.makeText(context, R.string.msg_connection_missing, Toast.LENGTH_LONG).show()
+            }
+            Intent.ACTION_VIEW -> intent.data?.takeIf { it.scheme == "content" }?.let {
+                vm.importFiles(context.contentResolver, listOf(it))
+            }
+        }
+    }
+
+    fun openSharedFolder() {
+        val authority = SharedFiles.authority(context)
+        val view = Intent(Intent.ACTION_VIEW)
+            .setDataAndType(
+                DocumentsContract.buildRootUri(authority, SharedFiles.ROOT_ID),
+                DocumentsContract.Root.MIME_TYPE_ITEM
             )
-        } else {
-            connect(node)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        try {
+            context.startActivity(view)
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(context, R.string.msg_no_files_app, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun addShortcut(node: NodeEntity) {
+        if (!ConnectionShortcuts.pin(context, node)) {
+            Toast.makeText(context, R.string.msg_shortcut_unsupported, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -188,7 +250,7 @@ fun ConnectionTreeScreen(
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_import)) },
                                 leadingIcon = { Icon(Icons.Default.Upload, null) },
-                                onClick = { overflowOpen = false; showImportDialog = true }
+                                onClick = { overflowOpen = false; openDocuments.launch(arrayOf("*/*")) }
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_export)) },
@@ -196,6 +258,21 @@ fun ConnectionTreeScreen(
                                 onClick = { overflowOpen = false; showExportDialog = true }
                             )
                             HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.credentials_title)) },
+                                leadingIcon = { Icon(Icons.Default.Key, null) },
+                                onClick = { overflowOpen = false; onCredentials() }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_shared_folder)) },
+                                leadingIcon = { Icon(Icons.Default.Folder, null) },
+                                onClick = { overflowOpen = false; openSharedFolder() }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_default_scale)) },
+                                leadingIcon = { Icon(Icons.Default.ZoomIn, null) },
+                                onClick = { overflowOpen = false; showScaleDialog = true }
+                            )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_biometric)) },
                                 leadingIcon = { Icon(Icons.Default.Fingerprint, null) },
@@ -251,6 +328,32 @@ fun ConnectionTreeScreen(
                 }
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {
+                    if (query.isBlank() && rows.size > RECENT_MIN_ROWS && recent.isNotEmpty()) {
+                        item(key = "recent-header") {
+                            Text(
+                                stringResource(R.string.section_recent),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 2.dp)
+                            )
+                        }
+                        items(recent, key = { "recent-${it.id}" }) { node ->
+                            TreeRowItem(
+                                node = node,
+                                depth = 0,
+                                hasChildren = false,
+                                sessionOpen = node.id in openSessions,
+                                onToggle = {},
+                                onOpen = { connectWithGate(node) },
+                                onEdit = { onEditConnection(node.id) },
+                                onDelete = { vm.delete(node) },
+                                onAddHere = {},
+                                onFolderLogin = {},
+                                onAddShortcut = { addShortcut(node) }
+                            )
+                        }
+                        item(key = "recent-divider") { HorizontalDivider() }
+                    }
                     items(rows, key = { it.node.id }) { row ->
                         TreeRowItem(
                             node = row.node,
@@ -264,7 +367,9 @@ fun ConnectionTreeScreen(
                             },
                             onEdit = { onEditConnection(row.node.id) },
                             onDelete = { vm.delete(row.node) },
-                            onAddHere = { onAddConnection(row.node.id) }
+                            onAddHere = { onAddConnection(row.node.id) },
+                            onFolderLogin = { folderLoginFor = row.node },
+                            onAddShortcut = { addShortcut(row.node) }
                         )
                     }
                 }
@@ -281,18 +386,39 @@ fun ConnectionTreeScreen(
         )
     }
 
-    if (showImportDialog) {
+    if (showScaleDialog) {
+        DefaultScaleDialog(onDismiss = { showScaleDialog = false })
+    }
+
+    resultText?.let { text ->
+        AlertDialog(
+            onDismissRequest = { resultText = null },
+            text = { Text(text) },
+            confirmButton = { TextButton(onClick = { resultText = null }) { Text(stringResource(R.string.action_ok)) } }
+        )
+    }
+
+    if (pendingConfCons != null) {
         PasswordActionDialog(
             title = stringResource(R.string.import_title),
             hint = stringResource(R.string.import_hint),
-            confirmLabel = stringResource(R.string.import_choose_file),
+            confirmLabel = stringResource(R.string.menu_import),
             showReplace = true,
-            onConfirm = { pwd, replace ->
-                showImportDialog = false
-                pendingImport = pwd to (replace == true)
-                openDocument.launch(arrayOf("text/xml", "application/xml", "*/*"))
+            onConfirm = { pwd, replace -> vm.importConfCons(pwd, replace == true) },
+            onDismiss = { vm.cancelConfCons() }
+        )
+    }
+
+    folderLoginFor?.let { folder ->
+        FolderLoginDialog(
+            folder = folder,
+            credentials = credentials,
+            onManage = { folderLoginFor = null; onCredentials() },
+            onConfirm = { id, apply ->
+                vm.setFolderCredential(folder, id, apply)
+                folderLoginFor = null
             },
-            onDismiss = { showImportDialog = false }
+            onDismiss = { folderLoginFor = null }
         )
     }
 
@@ -314,10 +440,20 @@ fun ConnectionTreeScreen(
 
 private val SessionOpenColor = Color(0xFF2E7D32)
 
+/** The recent section only helps when the list is longer than a screenful of glances. */
+private const val RECENT_MIN_ROWS = 5
+
 private fun TreeMessage.toText(context: Context): String = when (this) {
     is TreeMessage.ImportError -> context.getString(R.string.msg_import_error, detail.orEmpty())
     is TreeMessage.ExportError -> context.getString(R.string.msg_export_error, detail.orEmpty())
     TreeMessage.Exported -> context.getString(R.string.msg_export_done)
+    TreeMessage.UnknownFormat -> context.getString(R.string.msg_import_unknown)
+    TreeMessage.FileTooLarge -> context.getString(R.string.msg_import_too_large)
+    is TreeMessage.ImportedExternal -> buildString {
+        append(context.getString(R.string.msg_import_done, connections, folders))
+        if (duplicates > 0) append(' ').append(context.getString(R.string.msg_import_duplicates, duplicates))
+        if (passwordsNotTransferred > 0) append(' ').append(context.getString(R.string.msg_import_no_passwords))
+    }
     is TreeMessage.Imported -> buildString {
         append(context.getString(R.string.msg_import_done, connections, folders))
         if (passwordsDecrypted > 0) append(' ').append(context.getString(R.string.msg_import_passwords, passwordsDecrypted))
@@ -336,7 +472,9 @@ private fun TreeRowItem(
     onOpen: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onAddHere: () -> Unit
+    onAddHere: () -> Unit,
+    onFolderLogin: () -> Unit,
+    onAddShortcut: () -> Unit
 ) {
     val isFolder = node.nodeType == NodeEntity.TYPE_FOLDER
     var menuOpen by remember { mutableStateOf(false) }
@@ -411,11 +549,21 @@ private fun TreeRowItem(
                         leadingIcon = { Icon(Icons.Default.Add, null) },
                         onClick = { menuOpen = false; onAddHere() }
                     )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.folder_login)) },
+                        leadingIcon = { Icon(Icons.Default.Key, null) },
+                        onClick = { menuOpen = false; onFolderLogin() }
+                    )
                 } else {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_edit)) },
                         leadingIcon = { Icon(Icons.Default.Edit, null) },
                         onClick = { menuOpen = false; onEdit() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_add_shortcut)) },
+                        leadingIcon = { Icon(Icons.Default.AddToHomeScreen, null) },
+                        onClick = { menuOpen = false; onAddShortcut() }
                     )
                 }
                 DropdownMenuItem(
@@ -468,6 +616,84 @@ private fun TextPromptDialog(
         },
         confirmButton = {
             TextButton(onClick = { if (text.isNotBlank()) onConfirm(text.trim()) }) { Text(stringResource(R.string.action_ok)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
+    )
+}
+
+@Composable
+private fun DefaultScaleDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var selected by remember { mutableStateOf(SessionIntents.getDesktopScale(context)) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.menu_default_scale)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(stringResource(R.string.default_scale_hint), style = MaterialTheme.typography.bodySmall)
+                SessionIntents.SCALE_OPTIONS.forEach { option ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { selected = option },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = selected == option, onClick = { selected = option })
+                        Text(if (option == 0) stringResource(R.string.scale_auto) else "$option%")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { SessionIntents.setDesktopScale(context, selected); onDismiss() }) {
+                Text(stringResource(R.string.action_save))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
+    )
+}
+
+@Composable
+private fun FolderLoginDialog(
+    folder: NodeEntity,
+    credentials: List<CredentialEntity>,
+    onManage: () -> Unit,
+    onConfirm: (credentialId: String?, applyToChildren: Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selected by remember { mutableStateOf(folder.credentialId) }
+    var apply by remember { mutableStateOf(true) }
+
+    @Composable
+    fun Option(id: String?, label: String) {
+        Row(
+            Modifier.fillMaxWidth().clickable { selected = id },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(selected = selected == id, onClick = { selected = id })
+            Text(label)
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.folder_login)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(stringResource(R.string.folder_login_hint, folder.name), style = MaterialTheme.typography.bodySmall)
+                Option(null, stringResource(R.string.folder_login_none))
+                credentials.forEach { Option(it.id, it.name) }
+                if (credentials.isEmpty()) {
+                    TextButton(onClick = onManage) { Text(stringResource(R.string.credential_add)) }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = apply, onCheckedChange = { apply = it })
+                    Text(stringResource(R.string.folder_login_apply))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selected, apply && selected != null) }) {
+                Text(stringResource(R.string.action_save))
+            }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )

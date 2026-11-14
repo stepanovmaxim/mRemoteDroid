@@ -38,12 +38,12 @@
     <string name="cd_add_connection">Добавить подключение</string>
     <string name="cd_clear">Очистить</string>
     <string name="menu_new_folder">Новая папка</string>
-    <string name="menu_import">Импорт confCons.xml</string>
+    <string name="menu_import">Импорт</string>
     <string name="menu_export">Экспорт confCons.xml</string>
     <string name="menu_biometric">Биометрическая защита</string>
     <string name="menu_about">О приложении</string>
     <string name="search_hint">Поиск по имени, хосту, пользователю</string>
-    <string name="empty_list">Нет подключений.\nДобавьте через + или импортируйте confCons.xml.</string>
+    <string name="empty_list">Подключений пока нет.\nДобавьте кнопкой + или импортируйте список через меню.</string>
     <string name="nothing_found">Ничего не найдено.</string>
     <string name="session_open_hint">Сеанс открыт — нажмите, чтобы вернуться</string>
     <string name="sort_name_asc">Имя А→Я</string>
@@ -80,4 +80,42 @@
     <string name="about_tap_license">Нажмите, чтобы показать или скрыть текст лицензии.</string>
     <string name="about_disclaimer">mRemoteDroid — независимый проект, не связанный с проектом mRemoteNG и не одобренный им. Импорт и экспорт используют формат файла confCons.xml программы mRemoteNG только для совместимости.</string>
     <string name="about_mpl_note">Код Android-клиента FreeRDP в приложении изменён. Его исходный код, как и код всего приложения, доступен в репозитории.</string>
+
+    <!-- 1.4.0 -->
+    <string name="menu_shared_folder">Общая папка</string>
+    <string name="credentials_title">Сохранённые логины</string>
+    <string name="credentials_empty">Сохранённых логинов пока нет.\nОдин логин можно использовать на многих серверах и менять в одном месте.</string>
+    <string name="credential_add">Добавить логин</string>
+    <string name="credential_edit">Изменить логин</string>
+    <string name="credential_delete_message">Логин «%1$s» будет удалён. Подключения, которые его используют, вернутся к своим логину и паролю.</string>
+    <string name="field_login">Логин</string>
+    <string name="cred_own">Свои логин и пароль</string>
+    <string name="cred_inherit">Из папки: %1$s</string>
+    <string name="folder_login">Логин папки</string>
+    <string name="folder_login_hint">Подключения в папке «%1$s» смогут использовать этот логин.</string>
+    <string name="folder_login_none">Не задан</string>
+    <string name="folder_login_apply">Применить ко всем подключениям внутри</string>
+    <string name="field_gateway_user">Логин шлюза</string>
+    <string name="field_gateway_domain">Домен шлюза</string>
+    <string name="field_gateway_password">Пароль шлюза</string>
+    <string name="field_gateway_password_stored">Пароль шлюза (сохранён, оставьте пустым, чтобы не менять)</string>
+    <string name="hint_gateway_same">Оставьте пустым, чтобы использовать логин подключения</string>
+    <string name="field_sound">Звук</string>
+    <string name="sound_off">Выкл.</string>
+    <string name="sound_device">На телефоне</string>
+    <string name="sound_server">На сервере</string>
+    <string name="field_redirect_folder">Открыть папку серверу</string>
+    <string name="hint_redirect_folder">Сервер увидит папку приложения «mRemoteDroid» как диск. Открыть её можно через меню или приложение «Файлы». Включайте только для серверов, которым доверяете.</string>
+    <string name="action_add_shortcut">На рабочий стол</string>
+    <string name="section_recent">Недавние</string>
+    <string name="msg_connection_missing">Этого подключения больше нет.</string>
+    <string name="msg_shortcut_unsupported">Этот рабочий стол не поддерживает ярлыки.</string>
+    <string name="msg_no_files_app">Не найдено приложение, чтобы открыть папку. Используйте системное приложение «Файлы».</string>
+    <string name="msg_import_unknown">Неизвестный формат файла. Поддерживаются confCons.xml, .rdp, .rdg и CSV с колонкой хоста.</string>
+    <string name="msg_import_too_large">Файл слишком большой для импорта.</string>
+    <string name="msg_import_duplicates">Уже есть в списке, пропущено: %1$d.</string>
+    <string name="msg_import_no_passwords">Пароли, защищённые Windows, перенести нельзя: введите их или используйте сохранённый логин.</string>
+    <string name="menu_default_scale">Масштаб рабочего стола</string>
+    <string name="scale_auto">Авто (по плотности экрана)</string>
+    <string name="default_scale_hint">Как масштаб в параметрах экрана Windows. Применяется ко всем сеансам, меняется и из меню сеанса. Нужна Windows 8.1 / Server 2012 R2 или новее.</string>
 </resources>

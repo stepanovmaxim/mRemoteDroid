@@ -39,7 +39,7 @@ class MRemoteApp : GlobalApp() {
             Log.e("MRemoteApp", "FreeRDP native init failed; embedded RDP disabled", t)
         }
         val db = AppDatabase.get(this)
-        repository = ConnectionRepository(db.nodeDao())
+        repository = ConnectionRepository(db.nodeDao(), db.credentialDao())
     }
 
     /**

@@ -79,6 +79,13 @@ object MRemoteNgImporter {
                                     if (plain != null) pwOk++ else pwFail++
                                 }
                                 val proto = Protocol.fromMRemoteName(attr(parser, "Protocol"))
+                                val gatewayEnabled =
+                                    !attr(parser, "RDGatewayUsageMethod").equals("Never", ignoreCase = true)
+                                val gatewayOwnLogin = gatewayEnabled &&
+                                    attr(parser, "RDGatewayUseConnectionCredentials").equals("No", ignoreCase = true)
+                                val gatewayPlain = if (gatewayOwnLogin) {
+                                    decryptPassword(attr(parser, "RDGatewayPassword"), filePassword, iterations)
+                                } else null
                                 nodes += NodeEntity(
                                     id = id,
                                     parentId = parentId,
@@ -94,7 +101,11 @@ object MRemoteNgImporter {
                                     colorDepth = parseColors(attr(parser, "Colors")),
                                     consoleSession = attr(parser, "UseConsoleSession")
                                         ?.equals("true", ignoreCase = true) ?: false,
-                                    gatewayHostname = attr(parser, "RDGatewayHostname").orEmpty(),
+                                    gatewayHostname = if (gatewayEnabled) attr(parser, "RDGatewayHostname").orEmpty() else "",
+                                    gatewayUsername = if (gatewayOwnLogin) attr(parser, "RDGatewayUsername").orEmpty() else "",
+                                    gatewayDomain = if (gatewayOwnLogin) attr(parser, "RDGatewayDomain").orEmpty() else "",
+                                    gatewayCredentialBlob = gatewayPlain?.let { CredentialCrypto.encrypt(it) },
+                                    soundMode = parseSound(attr(parser, "RedirectSound")),
                                     description = attr(parser, "Descr").orEmpty()
                                 )
                                 // A connection node may still contain nested nodes in malformed
@@ -132,6 +143,12 @@ object MRemoteNgImporter {
         "Colors24Bit" -> 24
         "Colors32Bit" -> 32
         else -> 32
+    }
+
+    private fun parseSound(raw: String?): Int = when (raw?.trim()) {
+        "BringToThisComputer" -> NodeEntity.SOUND_DEVICE
+        "LeaveAtRemoteComputer" -> NodeEntity.SOUND_SERVER
+        else -> NodeEntity.SOUND_OFF
     }
 
     /** Returns the decrypted password, or null if decryption failed or input was empty. */

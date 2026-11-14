@@ -38,12 +38,12 @@
     <string name="cd_add_connection">Ajouter une connexion</string>
     <string name="cd_clear">Effacer</string>
     <string name="menu_new_folder">Nouveau dossier</string>
-    <string name="menu_import">Importer confCons.xml</string>
+    <string name="menu_import">Importer</string>
     <string name="menu_export">Exporter confCons.xml</string>
     <string name="menu_biometric">Verrouillage biométrique</string>
     <string name="menu_about">À propos</string>
     <string name="search_hint">Rechercher par nom, hôte, utilisateur</string>
-    <string name="empty_list">Aucune connexion pour l\'instant.\nAjoutez-en une avec + ou importez un fichier confCons.xml.</string>
+    <string name="empty_list">Aucune connexion pour le moment.\nAjoutez-en une avec + ou importez une liste depuis le menu.</string>
     <string name="nothing_found">Aucun résultat.</string>
     <string name="session_open_hint">Session ouverte, touchez pour y revenir</string>
     <string name="sort_name_asc">Nom A→Z</string>
@@ -80,4 +80,42 @@
     <string name="about_tap_license">Touchez pour afficher ou masquer le texte de la licence.</string>
     <string name="about_disclaimer">mRemoteDroid est un projet indépendant. Il n\'est ni affilié au projet mRemoteNG ni approuvé par celui-ci. L\'importation et l\'exportation utilisent le format de fichier confCons.xml de mRemoteNG uniquement à des fins de compatibilité.</string>
     <string name="about_mpl_note">Le code du client Android de FreeRDP utilisé dans cette application a été modifié. Son code source, comme celui de toute l\'application, est disponible dans le dépôt.</string>
+
+    <!-- 1.4.0 -->
+    <string name="menu_shared_folder">Dossier partagé</string>
+    <string name="credentials_title">Identifiants enregistrés</string>
+    <string name="credentials_empty">Aucun identifiant enregistré.\nUtilisez un même identifiant pour plusieurs serveurs et modifiez-le à un seul endroit.</string>
+    <string name="credential_add">Ajouter un identifiant</string>
+    <string name="credential_edit">Modifier l’identifiant</string>
+    <string name="credential_delete_message">L’identifiant « %1$s » sera supprimé. Les connexions qui l’utilisent reviendront à leur propre nom d’utilisateur et mot de passe.</string>
+    <string name="field_login">Identifiant</string>
+    <string name="cred_own">Nom d’utilisateur et mot de passe propres</string>
+    <string name="cred_inherit">Du dossier : %1$s</string>
+    <string name="folder_login">Identifiant du dossier</string>
+    <string name="folder_login_hint">Les connexions de « %1$s » pourront utiliser cet identifiant.</string>
+    <string name="folder_login_none">Non défini</string>
+    <string name="folder_login_apply">Appliquer à toutes les connexions à l’intérieur</string>
+    <string name="field_gateway_user">Nom d’utilisateur de la passerelle</string>
+    <string name="field_gateway_domain">Domaine de la passerelle</string>
+    <string name="field_gateway_password">Mot de passe de la passerelle</string>
+    <string name="field_gateway_password_stored">Mot de passe de la passerelle (enregistré, laissez vide pour le conserver)</string>
+    <string name="hint_gateway_same">Laissez vide pour utiliser l’identifiant de la connexion</string>
+    <string name="field_sound">Son</string>
+    <string name="sound_off">Désactivé</string>
+    <string name="sound_device">Sur cet appareil</string>
+    <string name="sound_server">Sur le serveur</string>
+    <string name="field_redirect_folder">Partager un dossier avec le serveur</string>
+    <string name="hint_redirect_folder">Le serveur voit le dossier « mRemoteDroid » de l’application comme un lecteur. Ouvrez-le depuis le menu ou l’application Fichiers. À activer uniquement pour des serveurs de confiance.</string>
+    <string name="action_add_shortcut">Ajouter à l’écran d’accueil</string>
+    <string name="section_recent">Récents</string>
+    <string name="msg_connection_missing">Cette connexion n’existe plus.</string>
+    <string name="msg_shortcut_unsupported">Ce lanceur ne prend pas en charge les raccourcis.</string>
+    <string name="msg_no_files_app">Aucune application trouvée pour ouvrir le dossier. Utilisez l’application Fichiers du système.</string>
+    <string name="msg_import_unknown">Format de fichier inconnu. Formats pris en charge : confCons.xml, .rdp, .rdg et CSV avec une colonne d’hôte.</string>
+    <string name="msg_import_too_large">Le fichier est trop volumineux pour être importé.</string>
+    <string name="msg_import_duplicates">Déjà dans la liste, ignorées : %1$d.</string>
+    <string name="msg_import_no_passwords">Les mots de passe protégés par Windows ne peuvent pas être transférés : saisissez-les ou utilisez un identifiant enregistré.</string>
+    <string name="menu_default_scale">Échelle du bureau</string>
+    <string name="scale_auto">Automatique (selon la densité de l’écran)</string>
+    <string name="default_scale_hint">Comme l’échelle des paramètres d’affichage de Windows. S’applique à toutes les sessions et se modifie aussi depuis le menu de session. Nécessite Windows 8.1 / Server 2012 R2 ou plus récent.</string>
 </resources>

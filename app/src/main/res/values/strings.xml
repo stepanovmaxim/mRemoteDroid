@@ -44,12 +44,12 @@
     <string name="cd_add_connection">Add connection</string>
     <string name="cd_clear">Clear</string>
     <string name="menu_new_folder">New folder</string>
-    <string name="menu_import">Import confCons.xml</string>
+    <string name="menu_import">Import</string>
     <string name="menu_export">Export confCons.xml</string>
     <string name="menu_biometric">Biometric lock</string>
     <string name="menu_about">About</string>
     <string name="search_hint">Search by name, host, user</string>
-    <string name="empty_list">No connections yet.\nAdd one with + or import a confCons.xml file.</string>
+    <string name="empty_list">No connections yet.\nAdd one with + or import a list from the menu.</string>
     <string name="nothing_found">Nothing found.</string>
     <string name="session_open_hint">Session open, tap to return</string>
     <string name="sort_name_asc">Name A→Z</string>
@@ -89,4 +89,42 @@
     <string name="about_tap_license">Tap to show or hide the license text.</string>
     <string name="about_disclaimer">mRemoteDroid is an independent project. It is not affiliated with or endorsed by the mRemoteNG project. Import and export only use the confCons.xml file format of mRemoteNG for compatibility.</string>
     <string name="about_mpl_note">The FreeRDP Android client code used in this app has been modified. Its source code, like that of the whole app, is available in the repository.</string>
+
+    <!-- 1.4.0 -->
+    <string name="menu_shared_folder">Shared folder</string>
+    <string name="credentials_title">Saved logins</string>
+    <string name="credentials_empty">No saved logins yet.\nUse one login for many servers and change it in one place.</string>
+    <string name="credential_add">Add login</string>
+    <string name="credential_edit">Edit login</string>
+    <string name="credential_delete_message">The login “%1$s” will be deleted. Connections that use it will go back to their own username and password.</string>
+    <string name="field_login">Login</string>
+    <string name="cred_own">Own username and password</string>
+    <string name="cred_inherit">From folder: %1$s</string>
+    <string name="folder_login">Folder login</string>
+    <string name="folder_login_hint">Connections in “%1$s” can use this login.</string>
+    <string name="folder_login_none">Not set</string>
+    <string name="folder_login_apply">Apply to all connections inside</string>
+    <string name="field_gateway_user">Gateway username</string>
+    <string name="field_gateway_domain">Gateway domain</string>
+    <string name="field_gateway_password">Gateway password</string>
+    <string name="field_gateway_password_stored">Gateway password (saved, leave empty to keep it)</string>
+    <string name="hint_gateway_same">Leave empty to use the connection’s login</string>
+    <string name="field_sound">Sound</string>
+    <string name="sound_off">Off</string>
+    <string name="sound_device">On this device</string>
+    <string name="sound_server">On the server</string>
+    <string name="field_redirect_folder">Share a folder with the server</string>
+    <string name="hint_redirect_folder">The server sees the app’s “mRemoteDroid” folder as a drive. Open it from the menu or the Files app. Enable only for servers you trust.</string>
+    <string name="action_add_shortcut">Add to home screen</string>
+    <string name="section_recent">Recent</string>
+    <string name="msg_connection_missing">This connection no longer exists.</string>
+    <string name="msg_shortcut_unsupported">This launcher does not support shortcuts.</string>
+    <string name="msg_no_files_app">No app found to open the folder. Use the system Files app.</string>
+    <string name="msg_import_unknown">Unknown file format. Supported: confCons.xml, .rdp, .rdg and CSV with a host column.</string>
+    <string name="msg_import_too_large">The file is too large to import.</string>
+    <string name="msg_import_duplicates">Already in the list, skipped: %1$d.</string>
+    <string name="msg_import_no_passwords">Windows-protected passwords cannot be transferred: enter them or use a saved login.</string>
+    <string name="menu_default_scale">Desktop scale</string>
+    <string name="scale_auto">Automatic (by screen density)</string>
+    <string name="default_scale_hint">Like the scale in Windows display settings. Used for every session; the session menu changes it too. Needs Windows 8.1 / Server 2012 R2 or newer.</string>
 </resources>

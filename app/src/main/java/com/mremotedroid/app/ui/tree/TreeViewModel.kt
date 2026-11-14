@@ -1,14 +1,23 @@
 package com.mremotedroid.app.ui.tree
 
 import com.mremotedroid.app.R
+import android.content.ContentResolver
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.mremotedroid.app.data.db.CredentialEntity
 import com.mremotedroid.app.data.db.NodeEntity
+import com.mremotedroid.app.data.importer.ExternalImporter
 import com.mremotedroid.app.data.importer.MRemoteNgImporter
 import com.mremotedroid.app.data.repo.ConnectionRepository
+import com.mremotedroid.app.data.repo.ResolvedLogin
 import com.mremotedroid.app.data.repo.TreeRow
+import com.mremotedroid.app.launch.ConnectionShortcuts
+import com.mremotedroid.app.launch.EmbeddedRdpLauncher
 import com.mremotedroid.app.data.settings.AppSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +44,14 @@ sealed interface TreeMessage {
         val passwordsDecrypted: Int,
         val passwordsFailed: Int
     ) : TreeMessage
+    data class ImportedExternal(
+        val connections: Int,
+        val folders: Int,
+        val duplicates: Int,
+        val passwordsNotTransferred: Int
+    ) : TreeMessage
+    data object UnknownFormat : TreeMessage
+    data object FileTooLarge : TreeMessage
     data object Exported : TreeMessage
     data class ExportError(val detail: String?) : TreeMessage
 }
@@ -63,15 +80,47 @@ class TreeViewModel(
 
     val biometricLockEnabled: Boolean get() = settings.biometricLock
 
+    val credentials: StateFlow<List<CredentialEntity>> =
+        repo.observeCredentials().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val recent: StateFlow<List<NodeEntity>> =
+        repo.observeRecent(RECENT_IN_LIST).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** A confCons.xml waiting for its file password. */
+    private val _pendingConfCons = MutableStateFlow<ByteArray?>(null)
+    val pendingConfCons: StateFlow<ByteArray?> = _pendingConfCons
+
     fun setQuery(q: String) { _query.value = q }
     fun setSort(mode: SortMode) { _sort.value = mode }
     fun clearMessage() { _message.value = null }
     fun markUnlocked() { _unlocked.value = true }
     fun setBiometricLock(enabled: Boolean) { settings.biometricLock = enabled }
 
-    /** Whether using this connection's stored password should require an unlock first. */
-    fun needsUnlock(node: NodeEntity): Boolean =
-        settings.biometricLock && node.credentialBlob != null && !_unlocked.value
+    suspend fun loginFor(node: NodeEntity): ResolvedLogin = repo.resolveLogin(node)
+
+    suspend fun nodeById(id: String): NodeEntity? = repo.getById(id)
+
+    /** Whether using this login's stored passwords should require an unlock first. */
+    fun needsUnlock(login: ResolvedLogin): Boolean =
+        settings.biometricLock && login.hasStoredPassword && !_unlocked.value
+
+    fun decrypted(login: ResolvedLogin) = EmbeddedRdpLauncher.Login(
+        username = login.username,
+        domain = login.domain,
+        password = repo.decrypt(login.credentialBlob),
+        gatewayPassword = repo.decrypt(login.gatewayCredentialBlob)
+    )
+
+    fun markConnected(context: Context, node: NodeEntity) {
+        val appContext = context.applicationContext
+        viewModelScope.launch {
+            repo.markConnected(node.id)
+            ConnectionShortcuts.publishRecent(appContext, repo.recent(RECENT_SHORTCUTS))
+        }
+    }
+
+    fun setFolderCredential(folder: NodeEntity, credentialId: String?, applyToChildren: Boolean) =
+        viewModelScope.launch { repo.setFolderCredential(folder.id, credentialId, applyToChildren) }
 
     fun toggleExpand(node: NodeEntity) = viewModelScope.launch {
         if (node.nodeType == NodeEntity.TYPE_FOLDER) repo.setExpanded(node.id, !node.expanded)
@@ -83,11 +132,69 @@ class TreeViewModel(
         repo.createFolder(parentId, name)
     }
 
-    fun passwordFor(node: NodeEntity): String = repo.decryptPassword(node)
+    /** Imports the chosen files; a confCons.xml first waits for its file password. */
+    fun importFiles(resolver: ContentResolver, uris: List<Uri>) = viewModelScope.launch {
+        var connections = 0
+        var folders = 0
+        var duplicates = 0
+        var noPasswords = 0
+        var imported = false
+        for (uri in uris) {
+            val result = runCatching {
+                val file = withContext(Dispatchers.IO) { readFile(resolver, uri) }
+                    ?: run { _message.value = TreeMessage.FileTooLarge; return@launch }
+                val format = ExternalImporter.detect(file.second)
+                if (format == ExternalImporter.Format.MREMOTENG) {
+                    _pendingConfCons.value = file.second
+                    null
+                } else {
+                    withContext(Dispatchers.Default) { ExternalImporter.parse(format, file.second, file.first) }
+                }
+            }.getOrElse {
+                _message.value =
+                    if (it is ExternalImporter.UnsupportedFormatException) TreeMessage.UnknownFormat
+                    else TreeMessage.ImportError(it.message)
+                return@launch
+            } ?: continue
+            val merged = repo.mergeImported(result.nodes)
+            connections += merged.connections
+            folders += merged.folders
+            duplicates += merged.duplicates
+            noPasswords += result.passwordsNotTransferred
+            imported = true
+        }
+        if (imported) {
+            _message.value = TreeMessage.ImportedExternal(connections, folders, duplicates, noPasswords)
+        }
+    }
 
-    fun import(input: InputStream, filePassword: String, replace: Boolean) = viewModelScope.launch {
+    /** Returns the display name and content, or null if the file is too large. */
+    private fun readFile(resolver: ContentResolver, uri: Uri): Pair<String?, ByteArray>? {
+        val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+            if (c.moveToFirst()) c.getString(0) else null
+        }
+        val bytes = resolver.openInputStream(uri)?.use { it.readBytesUpTo(MAX_IMPORT_BYTES + 1) } ?: ByteArray(0)
+        return if (bytes.size > MAX_IMPORT_BYTES) null else name to bytes
+    }
+
+    private fun InputStream.readBytesUpTo(limit: Int): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(8192)
+        while (out.size() < limit) {
+            val n = read(buffer)
+            if (n < 0) break
+            out.write(buffer, 0, n)
+        }
+        return out.toByteArray()
+    }
+
+    fun cancelConfCons() { _pendingConfCons.value = null }
+
+    fun importConfCons(filePassword: String, replace: Boolean) = viewModelScope.launch {
+        val bytes = _pendingConfCons.value ?: return@launch
+        _pendingConfCons.value = null
         val result = runCatching {
-            input.use { MRemoteNgImporter.parse(it, filePassword.ifBlank { "mR3m" }) }
+            MRemoteNgImporter.parse(bytes.inputStream(), filePassword.ifBlank { "mR3m" })
         }.getOrElse {
             _message.value = TreeMessage.ImportError(it.message)
             return@launch
@@ -147,6 +254,12 @@ class TreeViewModel(
         return nodes.sortedWith(
             compareByDescending<NodeEntity> { it.nodeType == NodeEntity.TYPE_FOLDER }.then(cmp)
         )
+    }
+
+    private companion object {
+        const val RECENT_IN_LIST = 3
+        const val RECENT_SHORTCUTS = 4
+        const val MAX_IMPORT_BYTES = 8 * 1024 * 1024
     }
 
     class Factory(

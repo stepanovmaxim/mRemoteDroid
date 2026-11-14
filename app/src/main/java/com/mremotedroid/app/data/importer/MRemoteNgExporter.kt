@@ -18,6 +18,7 @@ object MRemoteNgExporter {
     fun export(
         nodes: List<NodeEntity>,
         plaintextPasswordOf: (NodeEntity) -> String,
+        gatewayPasswordOf: (NodeEntity) -> String = { "" },
         filePassword: String = MRemoteNgCrypto.DEFAULT_FILE_PASSWORD,
         iterations: Int = MRemoteNgCrypto.DEFAULT_ITERATIONS
     ): String {
@@ -37,7 +38,7 @@ object MRemoteNgExporter {
         fun writeNode(node: NodeEntity, indent: String) {
             val isFolder = node.nodeType == NodeEntity.TYPE_FOLDER
             val children = byParent[node.id].orEmpty()
-            val attrs = buildAttributes(node, plaintextPasswordOf, filePassword, iterations)
+            val attrs = buildAttributes(node, plaintextPasswordOf, gatewayPasswordOf, filePassword, iterations)
             val attrString = attrs.entries.joinToString(" ") { (k, v) -> "$k=\"${esc(v)}\"" }
 
             if (isFolder) {
@@ -57,6 +58,7 @@ object MRemoteNgExporter {
     private fun buildAttributes(
         node: NodeEntity,
         plaintextPasswordOf: (NodeEntity) -> String,
+        gatewayPasswordOf: (NodeEntity) -> String,
         filePassword: String,
         iterations: Int
     ): LinkedHashMap<String, String> {
@@ -64,6 +66,11 @@ object MRemoteNgExporter {
         val proto = runCatching { Protocol.valueOf(node.protocol) }.getOrDefault(Protocol.RDP)
         val plain = if (isFolder) "" else plaintextPasswordOf(node)
         val encPw = if (plain.isEmpty()) "" else MRemoteNgCrypto.encrypt(plain, filePassword, iterations)
+
+        val gatewayPlain = if (isFolder) "" else gatewayPasswordOf(node)
+        val gatewayEncPw =
+            if (gatewayPlain.isEmpty()) "" else MRemoteNgCrypto.encrypt(gatewayPlain, filePassword, iterations)
+        val gatewayOwnLogin = node.gatewayUsername.isNotBlank()
 
         val a = LinkedHashMap<String, String>()
         a["Name"] = node.name
@@ -110,7 +117,11 @@ object MRemoteNgExporter {
         a["RedirectPrinters"] = "false"
         a["RedirectClipboard"] = "true"
         a["RedirectSmartCards"] = "false"
-        a["RedirectSound"] = "DoNotPlay"
+        a["RedirectSound"] = when (node.soundMode) {
+            NodeEntity.SOUND_DEVICE -> "BringToThisComputer"
+            NodeEntity.SOUND_SERVER -> "LeaveAtRemoteComputer"
+            else -> "DoNotPlay"
+        }
         a["RedirectAudioCapture"] = "false"
         a["RedirectKeys"] = "false"
         a["Connected"] = "false"
@@ -132,10 +143,10 @@ object MRemoteNgExporter {
         a["VNCViewOnly"] = "false"
         a["RDGatewayUsageMethod"] = if (node.gatewayHostname.isBlank()) "Never" else "Always"
         a["RDGatewayHostname"] = node.gatewayHostname
-        a["RDGatewayUseConnectionCredentials"] = "Yes"
-        a["RDGatewayUsername"] = ""
-        a["RDGatewayDomain"] = ""
-        a["RDGatewayPassword"] = ""
+        a["RDGatewayUseConnectionCredentials"] = if (gatewayOwnLogin) "No" else "Yes"
+        a["RDGatewayUsername"] = node.gatewayUsername
+        a["RDGatewayDomain"] = node.gatewayDomain
+        a["RDGatewayPassword"] = gatewayEncPw
         a["Favorite"] = "false"
         INHERIT_FLAGS.forEach { a[it] = "false" }
         return a

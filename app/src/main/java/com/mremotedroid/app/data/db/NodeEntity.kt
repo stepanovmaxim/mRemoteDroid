@@ -39,11 +39,31 @@ data class NodeEntity(
     val fullscreen: Boolean = true,
     val consoleSession: Boolean = false,
     val gatewayHostname: String = "",
+    /** Empty = the gateway uses the same login as the connection. */
+    val gatewayUsername: String = "",
+    val gatewayDomain: String = "",
+    @ColumnInfo(name = "gateway_credential_blob") val gatewayCredentialBlob: String? = null,
+    /** One of the SOUND_* constants. */
+    val soundMode: Int = SOUND_OFF,
+    val redirectFolder: Boolean = false,
 
-    val description: String = ""
+    val description: String = "",
+
+    /**
+     * Saved login used instead of the fields above: null = this node's own fields,
+     * [CREDENTIAL_INHERIT] = the nearest parent folder's login, otherwise a
+     * [CredentialEntity] id. Folders hold either null or an id.
+     */
+    val credentialId: String? = null,
+    /** Epoch millis of the last session start; 0 = never. */
+    val lastConnected: Long = 0
 ) {
     companion object {
         const val TYPE_FOLDER = "FOLDER"
         const val TYPE_CONNECTION = "CONNECTION"
+        const val CREDENTIAL_INHERIT = "inherit"
+        const val SOUND_OFF = 0
+        const val SOUND_DEVICE = 1
+        const val SOUND_SERVER = 2
     }
 }

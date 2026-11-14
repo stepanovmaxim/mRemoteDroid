@@ -2,6 +2,7 @@ package com.mremotedroid.app.ui.edit
 
 import com.mremotedroid.app.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,7 +13,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -25,12 +31,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mremotedroid.app.data.db.NodeEntity
 import com.mremotedroid.app.data.model.Protocol
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -113,33 +123,36 @@ fun EditConnectionScreen(
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
-            OutlinedTextField(
-                value = s.username,
-                onValueChange = { v -> vm.update { it.copy(username = v) } },
-                label = { Text(stringResource(R.string.field_user)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = s.domain,
-                onValueChange = { v -> vm.update { it.copy(domain = v) } },
-                label = { Text(stringResource(R.string.field_domain)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = s.password ?: "",
-                onValueChange = { v -> vm.update { it.copy(password = v) } },
-                label = {
-                    Text(
-                        stringResource(
-                            if (s.hasStoredPassword && s.password == null)
-                                R.string.field_password_stored else R.string.field_password
+            LoginPicker(s) { id -> vm.update { it.copy(credentialId = id) } }
+            if (s.usesOwnLogin) {
+                OutlinedTextField(
+                    value = s.username,
+                    onValueChange = { v -> vm.update { it.copy(username = v) } },
+                    label = { Text(stringResource(R.string.field_user)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = s.domain,
+                    onValueChange = { v -> vm.update { it.copy(domain = v) } },
+                    label = { Text(stringResource(R.string.field_domain)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = s.password ?: "",
+                    onValueChange = { v -> vm.update { it.copy(password = v) } },
+                    label = {
+                        Text(
+                            stringResource(
+                                if (s.hasStoredPassword && s.password == null)
+                                    R.string.field_password_stored else R.string.field_password
+                            )
                         )
-                    )
-                },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Password),
-                modifier = Modifier.fillMaxWidth()
-            )
+                    },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             if (s.protocol == Protocol.RDP) {
                 Row(
@@ -170,6 +183,72 @@ fun EditConnectionScreen(
                     label = { Text(stringResource(R.string.field_gateway)) },
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (s.gatewayHostname.isNotBlank()) {
+                    OutlinedTextField(
+                        value = s.gatewayUsername,
+                        onValueChange = { v -> vm.update { it.copy(gatewayUsername = v) } },
+                        label = { Text(stringResource(R.string.field_gateway_user)) },
+                        supportingText = { Text(stringResource(R.string.hint_gateway_same)) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (s.gatewayUsername.isNotBlank()) {
+                        OutlinedTextField(
+                            value = s.gatewayDomain,
+                            onValueChange = { v -> vm.update { it.copy(gatewayDomain = v) } },
+                            label = { Text(stringResource(R.string.field_gateway_domain)) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = s.gatewayPassword ?: "",
+                            onValueChange = { v -> vm.update { it.copy(gatewayPassword = v) } },
+                            label = {
+                                Text(
+                                    stringResource(
+                                        if (s.hasStoredGatewayPassword && s.gatewayPassword == null)
+                                            R.string.field_gateway_password_stored else R.string.field_gateway_password
+                                    )
+                                )
+                            },
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Password),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                Text(stringResource(R.string.field_sound), style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        NodeEntity.SOUND_OFF to R.string.sound_off,
+                        NodeEntity.SOUND_DEVICE to R.string.sound_device,
+                        NodeEntity.SOUND_SERVER to R.string.sound_server
+                    ).forEach { (mode, label) ->
+                        FilterChip(
+                            selected = s.soundMode == mode,
+                            onClick = { vm.update { it.copy(soundMode = mode) } },
+                            label = { Text(stringResource(label)) }
+                        )
+                    }
+                }
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.field_redirect_folder))
+                        Text(
+                            stringResource(R.string.hint_redirect_folder),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = s.redirectFolder,
+                        onCheckedChange = { v -> vm.update { it.copy(redirectFolder = v) } }
+                    )
+                }
             }
 
             OutlinedTextField(
@@ -183,6 +262,43 @@ fun EditConnectionScreen(
                 onClick = { vm.save(defaultName, onBack) },
                 modifier = Modifier.fillMaxWidth()
             ) { Text(stringResource(R.string.action_save)) }
+        }
+    }
+}
+
+@Composable
+private fun LoginPicker(s: EditState, onSelect: (String?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val own = stringResource(R.string.cred_own)
+    val inherited = s.inheritedLogin?.let { stringResource(R.string.cred_inherit, it) }
+    val current = when {
+        s.usesOwnLogin -> own
+        s.credentialId == NodeEntity.CREDENTIAL_INHERIT -> inherited ?: own
+        else -> s.credentials.firstOrNull { it.id == s.credentialId }?.name ?: own
+    }
+
+    Column {
+        Text(stringResource(R.string.field_login), style = MaterialTheme.typography.bodyMedium)
+        Box {
+            OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(current, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+            }
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                DropdownMenuItem(text = { Text(own) }, onClick = { open = false; onSelect(null) })
+                if (inherited != null) {
+                    DropdownMenuItem(
+                        text = { Text(inherited) },
+                        onClick = { open = false; onSelect(NodeEntity.CREDENTIAL_INHERIT) }
+                    )
+                }
+                s.credentials.forEach { credential ->
+                    DropdownMenuItem(
+                        text = { Text(credential.name) },
+                        onClick = { open = false; onSelect(credential.id) }
+                    )
+                }
+            }
         }
     }
 }
