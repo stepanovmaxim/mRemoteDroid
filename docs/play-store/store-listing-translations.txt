@@ -1,0 +1,188 @@
+mRemoteDroid store listing translations (version 1.5.0)
+Each language has: App name, Short description, Full description.
+
+==================================================
+Language: Russian (ru-RU)
+==================================================
+App name: mRemoteDroid: RDP, SSH, VNC
+
+Short description: Менеджер подключений RDP, SSH и VNC с папками и встроенными клиентами
+
+Full description:
+mRemoteDroid — менеджер подключений для администраторов, которые обслуживают много серверов. Храните все подключения RDP, SSH и VNC в дереве папок, подключайтесь одним нажатием и работайте в нескольких сеансах одновременно — всё во встроенных клиентах: RDP на основе FreeRDP, SSH-терминал и VNC-клиент.
+
+ВОЗМОЖНОСТИ
+• Дерево подключений с папками, поиск по имени, адресу или пользователю, сортировка, недавние подключения и ярлыки на рабочем столе
+• Встроенный RDP-клиент (FreeRDP): другие приложения не нужны
+• Встроенный SSH-терминал: вход по паролю или ключу (ed25519, ECDSA, RSA, с парольной фразой), проверка ключа сервера, цвета, копирование и вставка, панель клавиш Ctrl/Alt/Esc/Tab/стрелки/F1–F12, размер шрифта щипком
+• Встроенный VNC-клиент: пароль VNC, TLS (VeNCrypt), Apple Remote Desktop; клик касанием, перетаскивание, правый клик, прокрутка, масштаб, Ctrl+Alt+Del, буфер обмена
+• Несколько сеансов одновременно, каждый в своём окне в списке недавних; открытые сеансы отмечены в списке
+• Сенсорное управление: клик касанием, двойное касание, перетаскивание, прокрутка и правый клик двумя пальцами, указатель мыши по желанию
+• Клавиатура с вводом Unicode (любой язык, независимо от раскладки сервера), Esc/Ctrl/Alt/Win и функциональные клавиши
+• Автоповорот экрана внутри сеанса, даже если системный поворот заблокирован
+• Сеансы не обрываются при выключенном экране
+• Сохранённые пароли и SSH-ключи шифруются ключом из Android Keystore, разблокировка отпечатком или лицом по желанию; общие логины для многих серверов
+• Импорт и экспорт файлов confCons.xml, совместимых с mRemoteNG, включая зашифрованные пароли; импорт .rdp, RDCMan .rdg и CSV
+• NLA, TLS, RD Gateway, консольный сеанс (/admin), звук и общая папка
+• Подключение к компьютерам Windows и Windows Server с включённым удалённым рабочим столом, к Linux и другим SSH-серверам и к VNC-серверам
+• Без рекламы, без отслеживания, без аккаунта. Открытый исходный код.
+
+КОНФИДЕНЦИАЛЬНОСТЬ
+Все данные остаются на вашем устройстве. Приложение подключается только к добавленным вами серверам.
+
+mRemoteDroid — независимый проект с открытым исходным кодом, не связанный с проектом mRemoteNG. FreeRDP используется по лицензиям Apache License 2.0 и Mozilla Public License 2.0; терминал основан на Termux (Apache License 2.0).
+
+==================================================
+Language: German (de-DE)
+==================================================
+App name: mRemoteDroid: RDP, SSH, VNC
+
+Short description: RDP-, SSH- und VNC-Verbindungsmanager mit Ordnern und integrierten Clients
+
+Full description:
+mRemoteDroid ist ein Verbindungsmanager für Administratoren, die viele Server betreuen. Verwalten Sie alle RDP-, SSH- und VNC-Verbindungen in einer Ordnerstruktur, verbinden Sie sich mit einem Tippen und arbeiten Sie in mehreren Sitzungen gleichzeitig – alles in integrierten Clients: RDP auf Basis von FreeRDP, ein SSH-Terminal und ein VNC-Viewer.
+
+FUNKTIONEN
+• Ordnerstruktur für Verbindungen, Suche nach Name, Host oder Benutzer, Sortierung, zuletzt verwendete Verbindungen und Verknüpfungen auf dem Startbildschirm
+• Integrierter RDP-Client (FreeRDP): keine weitere App nötig
+• Integriertes SSH-Terminal: Anmeldung per Passwort oder Schlüssel (ed25519, ECDSA, RSA, mit Passphrase), Prüfung des Serverschlüssels, Farben, Kopieren und Einfügen, Tastenleiste Strg/Alt/Esc/Tab/Pfeile/F1–F12, Schriftgröße per Zwei-Finger-Zoom
+• Integrierter VNC-Client: VNC-Passwort, TLS (VeNCrypt), Apple Remote Desktop; Tippen zum Klicken, Ziehen, Rechtsklick, Scrollen, Zoom, Strg+Alt+Entf, Zwischenablage
+• Mehrere Sitzungen gleichzeitig, jede in einem eigenen Fenster unter „Zuletzt verwendet“; offene Sitzungen sind in der Liste markiert
+• Touch-Bedienung: Tippen zum Klicken, Doppeltippen, Ziehen, Scrollen und Rechtsklick mit zwei Fingern, optionaler Mauszeiger
+• Tastatur mit Unicode-Eingabe (jede Sprache, unabhängig vom Tastaturlayout des Servers), Esc/Strg/Alt/Win und Funktionstasten
+• Automatische Bildschirmdrehung in der Sitzung, auch wenn die Systemdrehung gesperrt ist
+• Sitzungen bleiben bei ausgeschaltetem Bildschirm verbunden
+• Gespeicherte Passwörter und SSH-Schlüssel werden mit einem Schlüssel im Android Keystore verschlüsselt, optionale Entsperrung per Fingerabdruck oder Gesicht; gemeinsame Anmeldungen für viele Server
+• Import und Export von confCons.xml-Dateien, kompatibel mit mRemoteNG, einschließlich verschlüsselter Passwörter; Import von .rdp, RDCMan .rdg und CSV
+• Authentifizierung auf Netzwerkebene (NLA), TLS, RD-Gateway, Konsolensitzung (/admin), Ton und freigegebener Ordner
+• Verbindet sich mit Windows- und Windows-Server-Computern mit aktiviertem Remotedesktop, mit Linux und anderen SSH-Servern sowie mit VNC-Servern
+• Keine Werbung, kein Tracking, kein Konto. Open Source.
+
+DATENSCHUTZ
+Alle Daten bleiben auf Ihrem Gerät. Die App verbindet sich nur mit den Servern, die Sie hinzufügen.
+
+mRemoteDroid ist ein unabhängiges Open-Source-Projekt und steht in keiner Verbindung zum Projekt mRemoteNG. FreeRDP wird unter der Apache License 2.0 und der Mozilla Public License 2.0 verwendet; das Terminal basiert auf Termux (Apache License 2.0).
+
+==================================================
+Language: Spanish (es-ES)
+==================================================
+App name: mRemoteDroid: RDP, SSH, VNC
+
+Short description: Gestor de conexiones RDP, SSH y VNC con carpetas y clientes integrados
+
+Full description:
+mRemoteDroid es un gestor de conexiones para administradores que se ocupan de muchos servidores. Guarda todas tus conexiones RDP, SSH y VNC en un árbol de carpetas, conéctate con un toque y trabaja en varias sesiones a la vez, todo con clientes integrados: RDP basado en FreeRDP, un terminal SSH y un visor VNC.
+
+FUNCIONES
+• Árbol de carpetas de conexiones, búsqueda por nombre, host o usuario, ordenación, conexiones recientes y accesos directos en la pantalla de inicio
+• Cliente RDP integrado (FreeRDP): no hace falta otra aplicación
+• Terminal SSH integrado: inicio con contraseña o clave (ed25519, ECDSA, RSA, con frase de contraseña), verificación de la clave del servidor, colores, copiar y pegar, barra de teclas Ctrl/Alt/Esc/Tab/flechas/F1–F12, tamaño de texto con gesto de pellizco
+• Cliente VNC integrado: contraseña VNC, TLS (VeNCrypt), Apple Remote Desktop; tocar para hacer clic, arrastrar, clic derecho, desplazamiento, zoom, Ctrl+Alt+Supr, portapapeles
+• Varias sesiones a la vez, cada una en su propia ventana en Recientes; las sesiones abiertas se marcan en la lista
+• Control táctil: tocar para hacer clic, doble toque, arrastrar, desplazamiento y clic derecho con dos dedos, puntero de ratón opcional
+• Teclado con entrada Unicode (cualquier idioma, independiente de la distribución del teclado del servidor), Esc/Ctrl/Alt/Win y teclas de función
+• Rotación automática de la pantalla dentro de la sesión, incluso con la rotación del sistema bloqueada
+• Las sesiones siguen conectadas con la pantalla apagada
+• Contraseñas y claves SSH guardadas cifradas con una clave del Android Keystore, desbloqueo opcional con huella o rostro; inicios de sesión compartidos para muchos servidores
+• Importación y exportación de archivos confCons.xml compatibles con mRemoteNG, incluidas las contraseñas cifradas; importación de .rdp, RDCMan .rdg y CSV
+• Autenticación a nivel de red (NLA), TLS, puerta de enlace RD, sesión de consola (/admin), sonido y carpeta compartida
+• Se conecta a equipos Windows y Windows Server con Escritorio remoto activado, a Linux y otros servidores SSH y a servidores VNC
+• Sin anuncios, sin rastreo, sin cuenta. Código abierto.
+
+PRIVACIDAD
+Todos los datos permanecen en tu dispositivo. La aplicación solo se conecta a los servidores que añades.
+
+mRemoteDroid es un proyecto independiente de código abierto y no está afiliado al proyecto mRemoteNG. FreeRDP se usa bajo la Apache License 2.0 y la Mozilla Public License 2.0; el terminal se basa en Termux (Apache License 2.0).
+
+==================================================
+Language: French (fr-FR)
+==================================================
+App name: mRemoteDroid: RDP, SSH, VNC
+
+Short description: Gestionnaire de connexions RDP, SSH et VNC avec dossiers et clients intégrés
+
+Full description:
+mRemoteDroid est un gestionnaire de connexions pour les administrateurs qui gèrent de nombreux serveurs. Rangez toutes vos connexions RDP, SSH et VNC dans une arborescence de dossiers, connectez-vous d'un simple toucher et travaillez dans plusieurs sessions à la fois, le tout avec des clients intégrés : RDP basé sur FreeRDP, un terminal SSH et un client VNC.
+
+FONCTIONNALITÉS
+• Arborescence de dossiers, recherche par nom, hôte ou utilisateur, tri, connexions récentes et raccourcis sur l'écran d'accueil
+• Client RDP intégré (FreeRDP) : aucune autre application nécessaire
+• Terminal SSH intégré : connexion par mot de passe ou clé (ed25519, ECDSA, RSA, avec phrase secrète), vérification de la clé du serveur, couleurs, copier-coller, barre de touches Ctrl/Alt/Échap/Tab/flèches/F1–F12, taille du texte par pincement
+• Client VNC intégré : mot de passe VNC, TLS (VeNCrypt), Apple Remote Desktop ; toucher pour cliquer, glisser, clic droit, défilement, zoom, Ctrl+Alt+Suppr, presse-papiers
+• Plusieurs sessions simultanées, chacune dans sa propre fenêtre dans les Applications récentes ; les sessions ouvertes sont signalées dans la liste
+• Commande tactile : toucher pour cliquer, double toucher, glisser, défilement et clic droit à deux doigts, pointeur de souris facultatif
+• Clavier avec saisie Unicode (toutes les langues, quelle que soit la disposition du clavier du serveur), Échap/Ctrl/Alt/Win et touches de fonction
+• Rotation automatique de l'écran dans la session, même si la rotation du système est verrouillée
+• Les sessions restent connectées écran éteint
+• Mots de passe et clés SSH enregistrés chiffrés avec une clé du Android Keystore, déverrouillage facultatif par empreinte ou visage ; identifiants partagés pour de nombreux serveurs
+• Import et export de fichiers confCons.xml compatibles avec mRemoteNG, y compris les mots de passe chiffrés ; import de .rdp, RDCMan .rdg et CSV
+• Authentification au niveau du réseau (NLA), TLS, passerelle RD, session console (/admin), son et dossier partagé
+• Se connecte aux ordinateurs Windows et Windows Server avec le Bureau à distance activé, à Linux et autres serveurs SSH, et aux serveurs VNC
+• Sans publicité, sans suivi, sans compte. Open source.
+
+CONFIDENTIALITÉ
+Toutes les données restent sur votre appareil. L'application se connecte uniquement aux serveurs que vous ajoutez.
+
+mRemoteDroid est un projet open source indépendant, sans lien avec le projet mRemoteNG. FreeRDP est utilisé sous Apache License 2.0 et Mozilla Public License 2.0 ; le terminal est basé sur Termux (Apache License 2.0).
+
+==================================================
+Language: Italian (it-IT)
+==================================================
+App name: mRemoteDroid: RDP, SSH, VNC
+
+Short description: Gestore di connessioni RDP, SSH e VNC con cartelle e client integrati
+
+Full description:
+mRemoteDroid è un gestore di connessioni per gli amministratori che seguono molti server. Tieni tutte le connessioni RDP, SSH e VNC in un albero di cartelle, connettiti con un tocco e lavora in più sessioni contemporaneamente, tutto con client integrati: RDP basato su FreeRDP, un terminale SSH e un client VNC.
+
+FUNZIONI
+• Albero di cartelle delle connessioni, ricerca per nome, host o utente, ordinamento, connessioni recenti e scorciatoie nella schermata Home
+• Client RDP integrato (FreeRDP): nessun'altra app necessaria
+• Terminale SSH integrato: accesso con password o chiave (ed25519, ECDSA, RSA, con passphrase), verifica della chiave del server, colori, copia e incolla, barra tasti Ctrl/Alt/Esc/Tab/frecce/F1–F12, dimensione del testo con pizzico
+• Client VNC integrato: password VNC, TLS (VeNCrypt), Apple Remote Desktop; tocco per clic, trascinamento, clic destro, scorrimento, zoom, Ctrl+Alt+Canc, appunti
+• Più sessioni contemporaneamente, ognuna nella propria finestra tra le app recenti; le sessioni aperte sono segnalate nell'elenco
+• Controllo touch: tocco per clic, doppio tocco, trascinamento, scorrimento e clic destro con due dita, puntatore del mouse opzionale
+• Tastiera con input Unicode (qualsiasi lingua, indipendente dal layout di tastiera del server), Esc/Ctrl/Alt/Win e tasti funzione
+• Rotazione automatica dello schermo nella sessione, anche con la rotazione di sistema bloccata
+• Le sessioni restano connesse a schermo spento
+• Password e chiavi SSH salvate cifrate con una chiave dell'Android Keystore, sblocco opzionale con impronta o volto; credenziali condivise per molti server
+• Importazione ed esportazione di file confCons.xml compatibili con mRemoteNG, incluse le password cifrate; importazione di .rdp, RDCMan .rdg e CSV
+• Autenticazione a livello di rete (NLA), TLS, gateway RD, sessione console (/admin), audio e cartella condivisa
+• Si connette a computer Windows e Windows Server con Desktop remoto attivo, a Linux e altri server SSH e a server VNC
+• Nessuna pubblicità, nessun tracciamento, nessun account. Open source.
+
+PRIVACY
+Tutti i dati restano sul tuo dispositivo. L'app si connette solo ai server che aggiungi.
+
+mRemoteDroid è un progetto open source indipendente e non è affiliato al progetto mRemoteNG. FreeRDP è usato con la Apache License 2.0 e la Mozilla Public License 2.0; il terminale è basato su Termux (Apache License 2.0).
+
+==================================================
+Language: Chinese Simplified (zh-CN)
+==================================================
+App name: mRemoteDroid: RDP, SSH, VNC
+
+Short description: 带文件夹和内置客户端的 RDP、SSH 和 VNC 连接管理器
+
+Full description:
+mRemoteDroid 是为管理大量服务器的管理员打造的连接管理器。将所有 RDP、SSH 和 VNC 连接保存在文件夹树中，一键连接，同时在多个会话中工作，全部使用内置客户端：基于 FreeRDP 的 RDP、SSH 终端和 VNC 查看器。
+
+功能
+• 连接文件夹树，按名称、主机或用户搜索，排序，最近连接和主屏幕快捷方式
+• 内置 RDP 客户端 (FreeRDP)：无需其他应用
+• 内置 SSH 终端：密码或密钥登录（ed25519、ECDSA、RSA，支持密码短语），服务器密钥验证，颜色，复制粘贴，Ctrl/Alt/Esc/Tab/方向键/F1–F12 按键栏，双指缩放调整字号
+• 内置 VNC 客户端：VNC 密码、TLS (VeNCrypt)、Apple 远程桌面；点按单击、拖动、右键、滚动、缩放、Ctrl+Alt+Del、剪贴板
+• 同时打开多个会话，每个会话在“最近使用”中有独立窗口；已打开的会话在列表中有标记
+• 触控操作：点按单击、双击、拖动、双指滚动和右键，可选鼠标指针
+• 支持 Unicode 输入的键盘（任意语言，不受服务器键盘布局影响），Esc/Ctrl/Alt/Win 和功能键
+• 会话内自动旋转屏幕，即使系统旋转已锁定
+• 屏幕关闭时会话保持连接
+• 保存的密码和 SSH 密钥使用 Android Keystore 中的密钥加密，可选指纹/面部解锁；多台服务器共用登录信息
+• 导入和导出与 mRemoteNG 兼容的 confCons.xml 文件（包括加密密码）；导入 .rdp、RDCMan .rdg 和 CSV
+• 网络级别身份验证 (NLA)、TLS、远程桌面网关、控制台会话 (/admin)、声音和共享文件夹
+• 可连接已启用远程桌面的 Windows 和 Windows Server 计算机、Linux 及其他 SSH 服务器以及 VNC 服务器
+• 无广告、无跟踪、无需账号。开源。
+
+隐私
+所有数据都保存在你的设备上。应用只会连接你添加的服务器。
+
+mRemoteDroid 是独立的开源项目，与 mRemoteNG 项目无关。FreeRDP 依据 Apache License 2.0 和 Mozilla Public License 2.0 使用；终端基于 Termux (Apache License 2.0)。
