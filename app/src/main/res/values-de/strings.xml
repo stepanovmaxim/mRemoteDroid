@@ -28,7 +28,6 @@
     <string name="field_console">Konsolensitzung (/admin)</string>
     <string name="field_gateway">RD-Gateway (optional)</string>
     <string name="field_description">Beschreibung</string>
-    <string name="edit_rdp_only_hint">Derzeit können nur RDP-Verbindungen geöffnet werden. VNC/SSH-Einstellungen werden gespeichert, aber es wird keine Sitzung gestartet.</string>
     <string name="default_connection_name">Neue Verbindung</string>
 
     <string name="unlock_title">Passwörter entsperren</string>
@@ -118,4 +117,30 @@
     <string name="menu_default_scale">Desktop-Skalierung</string>
     <string name="scale_auto">Automatisch (nach Bildschirmdichte)</string>
     <string name="default_scale_hint">Wie die Skalierung in den Windows-Anzeigeeinstellungen. Gilt für alle Sitzungen und lässt sich auch im Sitzungsmenü ändern. Erfordert Windows 8.1 / Server 2012 R2 oder neuer.</string>
+
+    <!-- 1.5.0: SSH and VNC -->
+    <string name="remote_connecting">Verbindung mit %1$s…</string>
+    <string name="remote_closed">Verbindung getrennt</string>
+    <string name="remote_auth_failed">Anmeldung fehlgeschlagen: Benutzername, Passwort oder Schlüssel prüfen</string>
+    <string name="remote_failed">Verbindung fehlgeschlagen: %1$s</string>
+    <string name="ssh_bad_key">Der private Schlüssel konnte nicht gelesen werden. Verwenden Sie eine OpenSSH- oder PEM-Schlüsseldatei.</string>
+    <string name="ssh_hostkey_rejected">Dem Serverschlüssel wurde nicht vertraut, die Verbindung wurde getrennt.</string>
+    <string name="ssh_copied">Kopiert</string>
+    <string name="vnc_unsupported_security">Der Server verlangt einen nicht unterstützten Sicherheitstyp (%1$s). Erlauben Sie in den Servereinstellungen VNC-Passwort- oder TLS-Authentifizierung.</string>
+    <string name="vnc_clipboard_sent">Zwischenablage an den Server gesendet: dort mit Strg+V einfügen</string>
+    <string name="hostkey_new_title">Neuer Server</string>
+    <string name="hostkey_new_message">%1$s\nSchlüssel %2$s:\n%3$s\n\nWenn Sie unsicher sind, prüfen Sie den Fingerabdruck mit dem Serveradministrator. Diesem Schlüssel vertrauen und verbinden?</string>
+    <string name="hostkey_changed_title">Serverschlüssel geändert!</string>
+    <string name="hostkey_changed_message">Der Schlüssel von %1$s hat sich geändert:\n%2$s %3$s\n\nDas passiert nach einer Neuinstallation des Servers, kann aber auch bedeuten, dass jemand die Verbindung abfängt. Vertrauen Sie dem neuen Schlüssel nur, wenn Sie den Grund kennen.</string>
+    <string name="hostkey_trust">Vertrauen und verbinden</string>
+    <string name="disconnect_confirm">Vom Server trennen?</string>
+    <string name="action_disconnect">Trennen</string>
+    <string name="action_to_list">Verbindungsliste</string>
+    <string name="field_private_key">Privater Schlüssel</string>
+    <string name="key_loaded">Schlüssel geladen</string>
+    <string name="key_none">Kein Schlüssel: Anmeldung mit Passwort</string>
+    <string name="key_choose">Schlüsseldatei wählen</string>
+    <string name="hint_private_key">OpenSSH- oder PEM-Datei (id_ed25519, id_rsa…). Ist der Schlüssel geschützt, geben Sie seine Passphrase als Passwort ein.</string>
+    <string name="hint_vnc_login">VNC: Das Passwort ist das VNC-Passwort. Den Benutzernamen brauchen nur Server, die danach fragen (TigerVNC mit Systembenutzern, macOS).</string>
+    <string name="about_terminal_note">Das Terminal-Modul wurde für SSH-Sitzungen angepasst; sein Quellcode ist im Repository verfügbar.</string>
 </resources>

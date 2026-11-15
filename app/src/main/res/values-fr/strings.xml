@@ -28,7 +28,6 @@
     <string name="field_console">Session console (/admin)</string>
     <string name="field_gateway">Passerelle RD (facultatif)</string>
     <string name="field_description">Description</string>
-    <string name="edit_rdp_only_hint">Pour l\'instant, seules les connexions RDP peuvent être ouvertes. Les paramètres VNC/SSH sont enregistrés, mais aucune session n\'est lancée.</string>
     <string name="default_connection_name">Nouvelle connexion</string>
 
     <string name="unlock_title">Déverrouiller les mots de passe</string>
@@ -118,4 +117,30 @@
     <string name="menu_default_scale">Échelle du bureau</string>
     <string name="scale_auto">Automatique (selon la densité de l’écran)</string>
     <string name="default_scale_hint">Comme l’échelle des paramètres d’affichage de Windows. S’applique à toutes les sessions et se modifie aussi depuis le menu de session. Nécessite Windows 8.1 / Server 2012 R2 ou plus récent.</string>
+
+    <!-- 1.5.0: SSH and VNC -->
+    <string name="remote_connecting">Connexion à %1$s…</string>
+    <string name="remote_closed">Connexion fermée</string>
+    <string name="remote_auth_failed">Échec de l’authentification : vérifiez l’utilisateur, le mot de passe ou la clé</string>
+    <string name="remote_failed">Échec de la connexion : %1$s</string>
+    <string name="ssh_bad_key">Impossible de lire la clé privée. Utilisez un fichier de clé OpenSSH ou PEM.</string>
+    <string name="ssh_hostkey_rejected">La clé du serveur n’a pas été approuvée, la connexion a été fermée.</string>
+    <string name="ssh_copied">Copié</string>
+    <string name="vnc_unsupported_security">Le serveur demande un type de sécurité non pris en charge (%1$s). Autorisez l’authentification par mot de passe VNC ou TLS dans les réglages du serveur.</string>
+    <string name="vnc_clipboard_sent">Presse-papiers envoyé au serveur : collez-le avec Ctrl+V</string>
+    <string name="hostkey_new_title">Nouveau serveur</string>
+    <string name="hostkey_new_message">%1$s\nClé %2$s :\n%3$s\n\nEn cas de doute, vérifiez l’empreinte avec l’administrateur du serveur. Faire confiance à cette clé et se connecter ?</string>
+    <string name="hostkey_changed_title">La clé du serveur a changé !</string>
+    <string name="hostkey_changed_message">La clé de %1$s a changé :\n%2$s %3$s\n\nCela arrive après une réinstallation du serveur, mais peut aussi signifier une interception de la connexion. Ne faites confiance à la nouvelle clé que si vous savez pourquoi elle a changé.</string>
+    <string name="hostkey_trust">Faire confiance et se connecter</string>
+    <string name="disconnect_confirm">Se déconnecter du serveur ?</string>
+    <string name="action_disconnect">Se déconnecter</string>
+    <string name="action_to_list">Liste des connexions</string>
+    <string name="field_private_key">Clé privée</string>
+    <string name="key_loaded">Clé chargée</string>
+    <string name="key_none">Pas de clé : connexion par mot de passe</string>
+    <string name="key_choose">Choisir le fichier de clé</string>
+    <string name="hint_private_key">Fichier OpenSSH ou PEM (id_ed25519, id_rsa…). Si la clé est protégée, saisissez sa phrase secrète comme mot de passe.</string>
+    <string name="hint_vnc_login">VNC : le mot de passe est celui de VNC. Le nom d’utilisateur ne sert qu’aux serveurs qui le demandent (TigerVNC avec utilisateurs système, macOS).</string>
+    <string name="about_terminal_note">Le module de terminal a été modifié pour les sessions SSH ; son code source est disponible dans le dépôt.</string>
 </resources>

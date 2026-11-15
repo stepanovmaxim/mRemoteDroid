@@ -28,7 +28,6 @@
     <string name="field_console">Консольная сессия (/admin)</string>
     <string name="field_gateway">RD Gateway (необязательно)</string>
     <string name="field_description">Описание</string>
-    <string name="edit_rdp_only_hint">Запуск сейчас поддерживается только для RDP; настройки VNC/SSH сохраняются, но сеанс не открывается.</string>
     <string name="default_connection_name">Новое подключение</string>
 
     <string name="unlock_title">Разблокировка паролей</string>
@@ -118,4 +117,30 @@
     <string name="menu_default_scale">Масштаб рабочего стола</string>
     <string name="scale_auto">Авто (по плотности экрана)</string>
     <string name="default_scale_hint">Как масштаб в параметрах экрана Windows. Применяется ко всем сеансам, меняется и из меню сеанса. Нужна Windows 8.1 / Server 2012 R2 или новее.</string>
+
+    <!-- 1.5.0: SSH and VNC -->
+    <string name="remote_connecting">Подключение к %1$s…</string>
+    <string name="remote_closed">Соединение закрыто</string>
+    <string name="remote_auth_failed">Не удалось войти: проверьте логин, пароль или ключ</string>
+    <string name="remote_failed">Не удалось подключиться: %1$s</string>
+    <string name="ssh_bad_key">Не удалось прочитать закрытый ключ. Нужен файл ключа OpenSSH или PEM.</string>
+    <string name="ssh_hostkey_rejected">Ключ сервера не принят, соединение закрыто.</string>
+    <string name="ssh_copied">Скопировано</string>
+    <string name="vnc_unsupported_security">Сервер требует тип защиты, который приложение не поддерживает (%1$s). Разрешите в настройках сервера вход по паролю VNC или через TLS.</string>
+    <string name="vnc_clipboard_sent">Буфер обмена отправлен на сервер: вставьте там через Ctrl+V</string>
+    <string name="hostkey_new_title">Новый сервер</string>
+    <string name="hostkey_new_message">%1$s\nКлюч %2$s:\n%3$s\n\nЕсли не уверены, сверьте отпечаток с администратором сервера. Доверять этому ключу и подключиться?</string>
+    <string name="hostkey_changed_title">Ключ сервера изменился!</string>
+    <string name="hostkey_changed_message">Ключ сервера %1$s изменился:\n%2$s %3$s\n\nТак бывает после переустановки сервера, но это может означать и перехват соединения. Доверяйте новому ключу, только если знаете, почему он изменился.</string>
+    <string name="hostkey_trust">Доверять и подключиться</string>
+    <string name="disconnect_confirm">Отключиться от сервера?</string>
+    <string name="action_disconnect">Отключиться</string>
+    <string name="action_to_list">К списку подключений</string>
+    <string name="field_private_key">Закрытый ключ</string>
+    <string name="key_loaded">Ключ загружен</string>
+    <string name="key_none">Ключа нет: вход по паролю</string>
+    <string name="key_choose">Выбрать файл ключа</string>
+    <string name="hint_private_key">Файл OpenSSH или PEM (id_ed25519, id_rsa…). Если ключ защищён, укажите его парольную фразу в поле пароля.</string>
+    <string name="hint_vnc_login">VNC: пароль — это пароль VNC. Логин нужен только серверам, которые его спрашивают (TigerVNC с системными пользователями, macOS).</string>
+    <string name="about_terminal_note">Модуль терминала изменён для SSH-сеансов; его исходный код доступен в репозитории.</string>
 </resources>

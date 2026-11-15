@@ -6,11 +6,15 @@ import android.net.Uri
 import com.freerdp.freerdpcore.application.GlobalApp
 import com.freerdp.freerdpcore.presentation.SessionIntents
 import com.mremotedroid.app.data.db.NodeEntity
+import com.mremotedroid.app.data.model.Protocol
+import com.mremotedroid.app.remote.RemoteSessions
+import com.mremotedroid.app.remote.ssh.SshActivity
+import com.mremotedroid.app.remote.vnc.VncActivity
 import java.net.URLEncoder
 
 /**
- * Launches an RDP session inside the app using the embedded FreeRDP engine
- * (the bundled freeRDPCore module), rather than handing off to an external client.
+ * Launches a session inside the app: RDP with the embedded FreeRDP engine (the bundled
+ * freeRDPCore module), SSH and VNC with their own windows.
  *
  * It builds a `freerdp://user@host:port/connect?...` URI that
  * [com.freerdp.freerdpcore.services.LibFreeRDP.setConnectionInfo] turns into
@@ -26,17 +30,43 @@ object EmbeddedRdpLauncher {
     /** Brings the already open session for [node] to the front; false if none is open. */
     fun reopen(context: Context, node: NodeEntity): Boolean {
         if (!ActiveSessions.isOpen(node.id)) return false
-        context.startActivity(SessionIntents.reopen(context, ActiveSessions.tagFor(node.id)))
+        val tag = ActiveSessions.tagFor(node.id)
+        val window = RemoteSessions.find(tag)?.let { activityFor(node) }
+        context.startActivity(
+            if (window != null) RemoteSessions.intent(context, window, tag) else SessionIntents.reopen(context, tag)
+        )
         return true
     }
 
     /** The login to use, already decrypted. */
-    class Login(val username: String, val domain: String, val password: String?, val gatewayPassword: String?)
+    class Login(
+        val username: String,
+        val domain: String,
+        val password: String?,
+        val gatewayPassword: String?,
+        /** OpenSSH/PEM private key for SSH; the password then unlocks it. */
+        val privateKey: String? = null
+    )
+
+    private fun activityFor(node: NodeEntity): Class<*>? = when (node.protocol) {
+        Protocol.SSH.name -> SshActivity::class.java
+        Protocol.VNC.name -> VncActivity::class.java
+        else -> null
+    }
 
     fun launch(context: Context, node: NodeEntity, login: Login): Result {
         if (reopen(context, node)) return Result.Ok
         if (ActiveSessions.count() >= GlobalApp.MAX_SESSIONS) {
             return Result.Error(context.getString(R.string.msg_max_sessions, GlobalApp.MAX_SESSIONS))
+        }
+        activityFor(node)?.let { window ->
+            if (node.hostname.isBlank()) return Result.Error(context.getString(R.string.msg_launch_failed))
+            val tag = ActiveSessions.tagFor(node.id)
+            context.startActivity(
+                RemoteSessions.intent(context, window, tag)
+                    .putExtra(RemoteSessions.EXTRA_PENDING, RemoteSessions.putPending(node, login))
+            )
+            return Result.Ok
         }
         return try {
             // No explicit size: SessionActivity picks a landscape resolution matching

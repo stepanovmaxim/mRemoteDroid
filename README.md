@@ -1,8 +1,11 @@
 # mRemoteDroid
 
-Менеджер RDP-подключений для Android в духе [mRemoteNG](https://github.com/mRemoteNG/mRemoteNG) со **встроенным RDP-движком FreeRDP** — сеанс открывается прямо в приложении, без сторонних клиентов.
+Менеджер подключений RDP, SSH и VNC для Android в духе [mRemoteNG](https://github.com/mRemoteNG/mRemoteNG): **встроенный RDP-движок FreeRDP, свой SSH-терминал и VNC-клиент** — сеанс открывается прямо в приложении, без сторонних клиентов.
 
-## Возможности (1.4.0)
+## Возможности (1.5.0)
+
+- 💻 **SSH**: терминал (xterm-256color, цвета, копирование и вставка, масштаб щипком), панель клавиш Esc/Tab/Ctrl/Alt/стрелки/F1–F12, вход по паролю, keyboard-interactive или ключу (OpenSSH/PEM: ed25519, ECDSA, RSA, в том числе с парольной фразой), проверка ключа сервера (запоминается, смена ключа — предупреждение).
+- 🖼️ **VNC**: свой RFB-клиент (3.3–3.8), пароль VNC, VeNCrypt с TLS (X509None/Vnc/Plain), Apple Remote Desktop; кодировки ZRLE, Hextile, RRE, CopyRect, Raw; тап — клик, долгий тап — перетаскивание, два пальца — прокрутка / тап двумя пальцами — правый клик, щипок — масштаб; Ctrl+Alt+Del, Win, F1–F12, отправка буфера обмена на сервер.
 
 - 🖥️ **Встроенный RDP** (FreeRDP 3.11 + OpenSSL): полноэкранный сеанс, альбомное разрешение по размеру экрана, «вписать в экран» в портрете, pinch-zoom.
 - ✋ **Управление касаниями**: тап — клик, двойной тап — двойной клик, долгий тап — перетаскивание, два пальца — прокрутка / правый клик; режим курсора мыши.
@@ -42,6 +45,7 @@
 ## Стек
 
 - Kotlin + Jetpack Compose (Material 3), Room, Navigation Compose, androidx.biometric
+- SSH: [JSch](https://github.com/mwiede/jsch) + Bouncy Castle (Ed25519/X25519 на всех версиях Android), терминал Termux
 - Модуль `:freeRDPCore` — Android-клиент FreeRDP (JNI + экран сеанса), доработан: immersive fullscreen, клавиатура/IME, касания, keep-alive
 - `minSdk 26`, `targetSdk 36`, ABI: `arm64-v8a`, `x86_64`
 
@@ -49,7 +53,10 @@
 
 ```
 app/                         приложение (дерево подключений, импорт/экспорт, настройки)
-  launch/EmbeddedRdpLauncher.kt   запуск сеанса (freerdp:// → SessionActivity)
+  launch/EmbeddedRdpLauncher.kt   запуск сеанса (RDP: freerdp:// → SessionActivity; SSH/VNC: свои окна)
+  remote/ssh/                SSH (JSch + терминал), проверка ключей серверов
+  remote/vnc/                VNC: RFB-клиент и экран
+terminal/                    терминал Termux (terminal-emulator + terminal-view, Apache 2.0), pty заменён на транспорт SSH
 freeRDPCore/                 FreeRDP Android client
   src/main/cpp/              JNI-мост (собирается локально через NDK)
   src/main/jniLibs/<abi>/    предсобранные libfreerdp3/winpr3/freerdp-client3/ssl/crypto/cjson + include/
@@ -97,6 +104,7 @@ adb logcat -s FreeRDP:* GlobalApp:* com.freerdp.*:*
 
 ## История версий
 
+- **1.5.0** — SSH (встроенный терминал, вход по паролю или ключу, проверка ключа сервера) и VNC (свой RFB-клиент, пароль VNC, TLS, Apple Remote Desktop).
 - **1.4.0** — импорт `.rdp`, `.rdg` и CSV, сохранённые логины и логин папки, ярлыки и недавние подключения, звук, общая папка, логин шлюза; масштаб рабочего стола по умолчанию в главном меню; исправлено: подключение через RD Gateway (использовался параметр `/g`, отсутствующий в этой сборке FreeRDP), сброс масштаба при возврате в открытый сеанс Windows, самопроизвольное появление клавиатуры при переподключении.
 - **1.3.1** — масштаб рабочего стола: на плотных экранах (Fold, планшеты) он больше не мелкий; пункт меню «Масштаб»; на больших экранах рабочий стол следует за окном и в вертикальной ориентации.
 - **1.3.0** — динамическое разрешение: рабочий стол подстраивается под размер окна (Samsung DeX, разделённый экран, поворот).

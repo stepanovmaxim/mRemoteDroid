@@ -76,6 +76,25 @@ private val components = listOf(
         "licenses/cjson-mit.txt"
     ),
     Component(
+        "Termux terminal-emulator and terminal-view (from Android Terminal Emulator)",
+        "Copyright © Jack Palevich, Fredrik Fornwall and Termux contributors",
+        "Apache License 2.0",
+        "licenses/apache-2.0.txt",
+        note = R.string.about_terminal_note
+    ),
+    Component(
+        "JSch (mwiede fork), with JZlib and jBCrypt",
+        "Copyright © 2002-2015 Atsuhiko Yamanaka, JCraft, Inc.; Matthias Wiedemann and contributors",
+        "BSD-style licenses",
+        "licenses/jsch-bsd.txt"
+    ),
+    Component(
+        "Bouncy Castle (bcprov)",
+        "Copyright © 2000-2025 The Legion of the Bouncy Castle Inc.",
+        "MIT License",
+        "licenses/bouncycastle-mit.txt"
+    ),
+    Component(
         "Android Jetpack (AndroidX, Jetpack Compose, Room, Navigation, Biometric, Material 3, Material Icons)",
         "Copyright © The Android Open Source Project",
         "Apache License 2.0",

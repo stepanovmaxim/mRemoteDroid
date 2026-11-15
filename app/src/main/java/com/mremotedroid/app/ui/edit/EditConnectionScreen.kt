@@ -103,12 +103,6 @@ fun EditConnectionScreen(
                     )
                 }
             }
-            if (s.protocol != Protocol.RDP) {
-                Text(
-                    stringResource(R.string.edit_rdp_only_hint),
-                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall
-                )
-            }
 
             OutlinedTextField(
                 value = s.hostname,
@@ -131,12 +125,14 @@ fun EditConnectionScreen(
                     label = { Text(stringResource(R.string.field_user)) },
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
-                    value = s.domain,
-                    onValueChange = { v -> vm.update { it.copy(domain = v) } },
-                    label = { Text(stringResource(R.string.field_domain)) },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                if (s.protocol == Protocol.RDP) {
+                    OutlinedTextField(
+                        value = s.domain,
+                        onValueChange = { v -> vm.update { it.copy(domain = v) } },
+                        label = { Text(stringResource(R.string.field_domain)) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
                 OutlinedTextField(
                     value = s.password ?: "",
                     onValueChange = { v -> vm.update { it.copy(password = v) } },
@@ -251,6 +247,15 @@ fun EditConnectionScreen(
                 }
             }
 
+            if (s.protocol == Protocol.SSH) PrivateKeyField(s, vm)
+            if (s.protocol == Protocol.VNC) {
+                Text(
+                    stringResource(R.string.hint_vnc_login),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             OutlinedTextField(
                 value = s.description,
                 onValueChange = { v -> vm.update { it.copy(description = v) } },
@@ -300,5 +305,46 @@ private fun LoginPicker(s: EditState, onSelect: (String?) -> Unit) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PrivateKeyField(s: EditState, vm: EditViewModel) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val text = runCatching {
+            context.contentResolver.openInputStream(uri)?.use { it.readBytes().take(64 * 1024).toByteArray() }
+                ?.toString(Charsets.UTF_8)
+        }.getOrNull()
+        if (text != null && text.contains("PRIVATE KEY")) {
+            vm.update { it.copy(privateKey = text) }
+        } else {
+            android.widget.Toast.makeText(context, R.string.ssh_bad_key, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+    val loaded = s.privateKey?.isNotEmpty() == true || (s.privateKey == null && s.hasStoredKey)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(R.string.field_private_key), style = MaterialTheme.typography.bodyMedium)
+        Text(
+            stringResource(if (loaded) R.string.key_loaded else R.string.key_none),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { pick.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.key_choose)) }
+            if (loaded) {
+                OutlinedButton(onClick = { vm.update { it.copy(privateKey = "") } }) {
+                    Text(stringResource(R.string.action_delete))
+                }
+            }
+        }
+        Text(
+            stringResource(R.string.hint_private_key),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

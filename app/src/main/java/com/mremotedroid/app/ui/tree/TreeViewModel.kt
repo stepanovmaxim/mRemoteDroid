@@ -108,7 +108,8 @@ class TreeViewModel(
         username = login.username,
         domain = login.domain,
         password = repo.decrypt(login.credentialBlob),
-        gatewayPassword = repo.decrypt(login.gatewayCredentialBlob)
+        gatewayPassword = repo.decrypt(login.gatewayCredentialBlob),
+        privateKey = repo.decrypt(login.privateKeyBlob).ifEmpty { null }
     )
 
     fun markConnected(context: Context, node: NodeEntity) {

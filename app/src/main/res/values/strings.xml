@@ -33,7 +33,6 @@
     <string name="field_console">Console session (/admin)</string>
     <string name="field_gateway">RD Gateway (optional)</string>
     <string name="field_description">Description</string>
-    <string name="edit_rdp_only_hint">Only RDP connections can be opened for now. VNC/SSH settings are saved, but no session is started.</string>
     <string name="default_connection_name">New connection</string>
 
     <!-- connection list -->
@@ -127,4 +126,30 @@
     <string name="menu_default_scale">Desktop scale</string>
     <string name="scale_auto">Automatic (by screen density)</string>
     <string name="default_scale_hint">Like the scale in Windows display settings. Used for every session; the session menu changes it too. Needs Windows 8.1 / Server 2012 R2 or newer.</string>
+
+    <!-- 1.5.0: SSH and VNC -->
+    <string name="remote_connecting">Connecting to %1$s…</string>
+    <string name="remote_closed">Connection closed</string>
+    <string name="remote_auth_failed">Authentication failed: check the username, password or key</string>
+    <string name="remote_failed">Connection failed: %1$s</string>
+    <string name="ssh_bad_key">The private key could not be read. Use an OpenSSH or PEM key file.</string>
+    <string name="ssh_hostkey_rejected">The server key was not trusted, the connection was closed.</string>
+    <string name="ssh_copied">Copied</string>
+    <string name="vnc_unsupported_security">The server asks for a security type the app does not support (%1$s). Allow VNC password or TLS authentication in the server settings.</string>
+    <string name="vnc_clipboard_sent">Clipboard sent to the server: paste it there with Ctrl+V</string>
+    <string name="hostkey_new_title">New server</string>
+    <string name="hostkey_new_message">%1$s\nKey %2$s:\n%3$s\n\nIf you are not sure, check the fingerprint with the server administrator. Trust this key and connect?</string>
+    <string name="hostkey_changed_title">Server key changed!</string>
+    <string name="hostkey_changed_message">The key of %1$s has changed:\n%2$s %3$s\n\nThis happens after the server is reinstalled, but can also mean someone is intercepting the connection. Trust the new key only if you know why it changed.</string>
+    <string name="hostkey_trust">Trust and connect</string>
+    <string name="disconnect_confirm">Disconnect from the server?</string>
+    <string name="action_disconnect">Disconnect</string>
+    <string name="action_to_list">Connection list</string>
+    <string name="field_private_key">Private key</string>
+    <string name="key_loaded">Key loaded</string>
+    <string name="key_none">No key: password login</string>
+    <string name="key_choose">Choose key file</string>
+    <string name="hint_private_key">OpenSSH or PEM file (id_ed25519, id_rsa…). If the key is protected, enter its passphrase as the password.</string>
+    <string name="hint_vnc_login">VNC: the password is the VNC password. The username is only needed for servers that ask for one (TigerVNC with system users, macOS).</string>
+    <string name="about_terminal_note">The terminal module was modified for SSH sessions; its source code is available in the repository.</string>
 </resources>

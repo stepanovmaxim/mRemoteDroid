@@ -46,13 +46,27 @@ public class SessionKeepAliveService extends Service
 
 	/** Connected sessions: instance -> {title, document tag}. */
 	private static final Map<Long, String[]> sessions = new LinkedHashMap<>();
+	/** Windows of sessions that are not RDP (SSH, VNC), by instance. */
+	private static final Map<Long, Intent> reopenIntents = new LinkedHashMap<>();
 
 	/** Registers a connected session; the first one starts the foreground service. */
 	public static void start(Context context, long instance, String title, String tag)
 	{
+		start(context, instance, title, tag, null);
+	}
+
+	/**
+	 * Registers a session whose window is opened by {@code reopen} (SSH, VNC); null means
+	 * an RDP session window.
+	 */
+	public static void start(Context context, long instance, String title, String tag,
+	                         Intent reopen)
+	{
 		synchronized (sessions)
 		{
 			sessions.put(instance, new String[] { title != null ? title : "", tag });
+			if (reopen != null)
+				reopenIntents.put(instance, reopen);
 		}
 		Intent i = new Intent(context, SessionKeepAliveService.class);
 		try
@@ -71,6 +85,7 @@ public class SessionKeepAliveService extends Service
 		boolean empty;
 		synchronized (sessions)
 		{
+			reopenIntents.remove(instance);
 			if (sessions.remove(instance) == null)
 				return;
 			empty = sessions.isEmpty();
@@ -120,9 +135,12 @@ public class SessionKeepAliveService extends Service
 	private Notification buildNotification()
 	{
 		List<String[]> list;
+		Intent single = null;
 		synchronized (sessions)
 		{
 			list = new ArrayList<>(sessions.values());
+			if (sessions.size() == 1)
+				single = reopenIntents.get(sessions.keySet().iterator().next());
 		}
 		if (list.isEmpty())
 			return null;
@@ -146,7 +164,7 @@ public class SessionKeepAliveService extends Service
 		{
 			title = getString(R.string.session_notification_title, list.get(0)[0]);
 			text = getString(R.string.session_notification_text);
-			open = SessionIntents.reopen(this, list.get(0)[1]);
+			open = single != null ? new Intent(single) : SessionIntents.reopen(this, list.get(0)[1]);
 		}
 		else
 		{

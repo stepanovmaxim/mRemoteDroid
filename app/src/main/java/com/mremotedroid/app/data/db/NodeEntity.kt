@@ -46,6 +46,8 @@ data class NodeEntity(
     /** One of the SOUND_* constants. */
     val soundMode: Int = SOUND_OFF,
     val redirectFolder: Boolean = false,
+    /** SSH private key (OpenSSH or PEM text), encrypted like passwords; null = none. */
+    @ColumnInfo(name = "private_key_blob") val privateKeyBlob: String? = null,
 
     val description: String = "",
 

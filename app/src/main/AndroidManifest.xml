@@ -39,6 +39,26 @@
             </intent-filter>
         </activity>
 
+        <!-- SSH and VNC windows: like RDP sessions, each in its own task / Recents card -->
+        <activity
+            android:name=".remote.ssh.SshActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="orientation|keyboard|keyboardHidden|screenSize|smallestScreenSize|density|screenLayout|navigation"
+            android:documentLaunchMode="intoExisting"
+            android:exported="false"
+            android:persistableMode="persistNever"
+            android:theme="@style/Theme.MRemoteDroid"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+        <activity
+            android:name=".remote.vnc.VncActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="orientation|keyboard|keyboardHidden|screenSize|smallestScreenSize|density|screenLayout|navigation"
+            android:documentLaunchMode="intoExisting"
+            android:exported="false"
+            android:persistableMode="persistNever"
+            android:theme="@style/Theme.MRemoteDroid"
+            android:windowSoftInputMode="stateHidden|adjustResize" />
+
         <provider
             android:name=".launch.SharedFilesProvider"
             android:authorities="${applicationId}.shared"

@@ -8,13 +8,13 @@ Effective date: 20 October 2026
 
 ## English
 
-mRemoteDroid is a remote desktop (RDP) connection manager. It is developed as an open-source project and has no server of its own.
+mRemoteDroid is a connection manager for remote desktop (RDP), SSH and VNC. It is developed as an open-source project and has no server of its own.
 
 **Data the developer collects: none.** The app contains no analytics, advertising, tracking or telemetry SDKs, and sends nothing to the developer.
 
 **Data stored on your device.** The connection list you create or import (names, host names, ports, user names, domains, descriptions) is stored only in the app's private storage on your device. Saved passwords are encrypted with AES-256-GCM using a key held in the Android Keystore. App data is excluded from Android cloud backup and device transfer. Uninstalling the app deletes all of it.
 
-**Network connections.** The app connects only to the remote computers and RD gateways that you configure, using the RDP protocol. Your user name and password are sent only to those servers in order to sign in.
+**Network connections.** The app connects only to the remote computers and RD gateways that you configure, using the RDP, SSH or VNC protocol. Your user name, password or SSH key is used only to sign in to those servers. Saved SSH keys are encrypted like passwords; the keys of SSH servers you trust are stored on the device to detect a changed server.
 
 **Clipboard.** While a remote session is open, text you copy is synchronized between your device and the remote computer, as in any remote desktop client.
 
@@ -32,13 +32,13 @@ mRemoteDroid is a remote desktop (RDP) connection manager. It is developed as an
 
 ## Русский
 
-mRemoteDroid — менеджер подключений к удалённому рабочему столу (RDP). Это проект с открытым исходным кодом, своего сервера у него нет.
+mRemoteDroid — менеджер подключений к удалённым компьютерам по RDP, SSH и VNC. Это проект с открытым исходным кодом, своего сервера у него нет.
 
 **Данные, которые собирает разработчик: никакие.** В приложении нет аналитики, рекламы, трекинга и телеметрии; разработчику ничего не отправляется.
 
 **Данные на вашем устройстве.** Список подключений, который вы создаёте или импортируете (названия, адреса, порты, имена пользователей, домены, описания), хранится только в закрытом хранилище приложения на устройстве. Сохранённые пароли зашифрованы AES-256-GCM ключом из Android Keystore. Данные приложения исключены из облачного резервного копирования Android и переноса на другое устройство. При удалении приложения всё удаляется.
 
-**Сетевые подключения.** Приложение подключается только к тем удалённым компьютерам и шлюзам RD Gateway, которые вы указали, по протоколу RDP. Имя пользователя и пароль передаются только этим серверам для входа.
+**Сетевые подключения.** Приложение подключается только к тем удалённым компьютерам и шлюзам RD Gateway, которые вы указали, по протоколам RDP, SSH или VNC. Имя пользователя, пароль или SSH-ключ используются только для входа на эти серверы. Сохранённые SSH-ключи шифруются так же, как пароли; ключи SSH-серверов, которым вы доверились, хранятся на устройстве, чтобы заметить подмену сервера.
 
 **Буфер обмена.** Пока открыт сеанс, скопированный текст синхронизируется между устройством и удалённым компьютером, как в любом клиенте удалённого рабочего стола.
 
@@ -56,13 +56,13 @@ mRemoteDroid — менеджер подключений к удалённому
 
 ## Deutsch
 
-mRemoteDroid ist ein Verbindungsmanager für Remotedesktop (RDP). Es ist ein Open-Source-Projekt ohne eigenen Server.
+mRemoteDroid ist ein Verbindungsmanager für Remotedesktop (RDP), SSH und VNC. Es ist ein Open-Source-Projekt ohne eigenen Server.
 
 **Vom Entwickler erhobene Daten: keine.** Die App enthält keine Analyse-, Werbe-, Tracking- oder Telemetrie-SDKs und sendet nichts an den Entwickler.
 
 **Auf Ihrem Gerät gespeicherte Daten.** Die von Ihnen angelegte oder importierte Verbindungsliste (Namen, Hostnamen, Ports, Benutzernamen, Domänen, Beschreibungen) wird nur im privaten Speicher der App auf Ihrem Gerät abgelegt. Gespeicherte Passwörter werden mit AES-256-GCM und einem Schlüssel im Android Keystore verschlüsselt. App-Daten sind von der Android-Cloud-Sicherung und Geräteübertragung ausgenommen. Beim Deinstallieren wird alles gelöscht.
 
-**Netzwerkverbindungen.** Die App verbindet sich nur per RDP mit den von Ihnen konfigurierten Remotecomputern und RD-Gateways. Benutzername und Passwort werden nur zur Anmeldung an diese Server gesendet.
+**Netzwerkverbindungen.** Die App verbindet sich nur per RDP, SSH oder VNC mit den von Ihnen konfigurierten Remotecomputern und RD-Gateways. Benutzername, Passwort oder SSH-Schlüssel dienen nur der Anmeldung an diesen Servern. Gespeicherte SSH-Schlüssel werden wie Passwörter verschlüsselt; die Schlüssel vertrauter SSH-Server werden auf dem Gerät gespeichert, um einen ausgetauschten Server zu erkennen.
 
 **Zwischenablage.** Während eine Sitzung geöffnet ist, wird kopierter Text zwischen Gerät und Remotecomputer synchronisiert, wie bei jedem Remotedesktop-Client.
 
@@ -80,13 +80,13 @@ mRemoteDroid ist ein Verbindungsmanager für Remotedesktop (RDP). Es ist ein Ope
 
 ## Español
 
-mRemoteDroid es un gestor de conexiones de escritorio remoto (RDP). Es un proyecto de código abierto sin servidor propio.
+mRemoteDroid es un gestor de conexiones de escritorio remoto (RDP), SSH y VNC. Es un proyecto de código abierto sin servidor propio.
 
 **Datos que recopila el desarrollador: ninguno.** La aplicación no incluye SDK de análisis, publicidad, seguimiento ni telemetría, y no envía nada al desarrollador.
 
 **Datos guardados en tu dispositivo.** La lista de conexiones que creas o importas (nombres, hosts, puertos, usuarios, dominios, descripciones) se guarda solo en el almacenamiento privado de la aplicación en tu dispositivo. Las contraseñas guardadas se cifran con AES-256-GCM mediante una clave del Android Keystore. Los datos de la aplicación quedan excluidos de la copia de seguridad en la nube de Android y de la transferencia entre dispositivos. Al desinstalar la aplicación se elimina todo.
 
-**Conexiones de red.** La aplicación solo se conecta mediante RDP a los equipos remotos y puertas de enlace RD que configures. Tu usuario y contraseña se envían únicamente a esos servidores para iniciar sesión.
+**Conexiones de red.** La aplicación solo se conecta mediante RDP, SSH o VNC a los equipos remotos y puertas de enlace RD que configures. Tu usuario, contraseña o clave SSH solo se usan para iniciar sesión en esos servidores. Las claves SSH guardadas se cifran igual que las contraseñas; las claves de los servidores SSH en los que confías se guardan en el dispositivo para detectar un servidor cambiado.
 
 **Portapapeles.** Mientras hay una sesión abierta, el texto copiado se sincroniza entre el dispositivo y el equipo remoto, como en cualquier cliente de escritorio remoto.
 
@@ -104,13 +104,13 @@ mRemoteDroid es un gestor de conexiones de escritorio remoto (RDP). Es un proyec
 
 ## Français
 
-mRemoteDroid est un gestionnaire de connexions Bureau à distance (RDP). C'est un projet open source sans serveur propre.
+mRemoteDroid est un gestionnaire de connexions Bureau à distance (RDP), SSH et VNC. C'est un projet open source sans serveur propre.
 
 **Données collectées par le développeur : aucune.** L'application ne contient aucun SDK d'analyse, de publicité, de suivi ou de télémétrie et n'envoie rien au développeur.
 
 **Données stockées sur votre appareil.** La liste de connexions que vous créez ou importez (noms, hôtes, ports, noms d'utilisateur, domaines, descriptions) est stockée uniquement dans l'espace privé de l'application sur votre appareil. Les mots de passe enregistrés sont chiffrés en AES-256-GCM avec une clé conservée dans l'Android Keystore. Les données de l'application sont exclues de la sauvegarde cloud Android et du transfert d'appareil. La désinstallation supprime tout.
 
-**Connexions réseau.** L'application se connecte uniquement, via RDP, aux ordinateurs distants et passerelles RD que vous configurez. Votre nom d'utilisateur et votre mot de passe ne sont envoyés qu'à ces serveurs pour l'authentification.
+**Connexions réseau.** L'application se connecte uniquement, via RDP, SSH ou VNC, aux ordinateurs distants et passerelles RD que vous configurez. Votre nom d'utilisateur, votre mot de passe ou votre clé SSH ne servent qu'à vous authentifier auprès de ces serveurs. Les clés SSH enregistrées sont chiffrées comme les mots de passe ; les clés des serveurs SSH approuvés sont conservées sur l'appareil pour détecter un serveur remplacé.
 
 **Presse-papiers.** Pendant une session, le texte copié est synchronisé entre l'appareil et l'ordinateur distant, comme dans tout client Bureau à distance.
 
@@ -128,13 +128,13 @@ mRemoteDroid est un gestionnaire de connexions Bureau à distance (RDP). C'est u
 
 ## Italiano
 
-mRemoteDroid è un gestore di connessioni Desktop remoto (RDP). È un progetto open source senza server proprio.
+mRemoteDroid è un gestore di connessioni Desktop remoto (RDP), SSH e VNC. È un progetto open source senza server proprio.
 
 **Dati raccolti dallo sviluppatore: nessuno.** L'app non contiene SDK di analisi, pubblicità, tracciamento o telemetria e non invia nulla allo sviluppatore.
 
 **Dati memorizzati sul dispositivo.** L'elenco delle connessioni che crei o importi (nomi, host, porte, nomi utente, domini, descrizioni) è memorizzato solo nello spazio privato dell'app sul dispositivo. Le password salvate sono cifrate con AES-256-GCM tramite una chiave conservata nell'Android Keystore. I dati dell'app sono esclusi dal backup cloud di Android e dal trasferimento tra dispositivi. Disinstallando l'app viene eliminato tutto.
 
-**Connessioni di rete.** L'app si connette solo, tramite RDP, ai computer remoti e ai gateway RD che configuri. Nome utente e password vengono inviati solo a quei server per l'accesso.
+**Connessioni di rete.** L'app si connette solo, tramite RDP, SSH o VNC, ai computer remoti e ai gateway RD che configuri. Nome utente, password o chiave SSH servono solo per accedere a quei server. Le chiavi SSH salvate sono cifrate come le password; le chiavi dei server SSH ritenuti attendibili sono salvate sul dispositivo per rilevare un server sostituito.
 
 **Appunti.** Durante una sessione, il testo copiato viene sincronizzato tra il dispositivo e il computer remoto, come in qualsiasi client Desktop remoto.
 
@@ -152,13 +152,13 @@ mRemoteDroid è un gestore di connessioni Desktop remoto (RDP). È un progetto o
 
 ## 中文
 
-mRemoteDroid 是一款远程桌面 (RDP) 连接管理器。它是开源项目，没有自己的服务器。
+mRemoteDroid 是一款远程桌面 (RDP)、SSH 和 VNC 连接管理器。它是开源项目，没有自己的服务器。
 
 **开发者收集的数据：无。** 本应用不包含任何分析、广告、跟踪或遥测 SDK，也不会向开发者发送任何内容。
 
 **存储在你设备上的数据。** 你创建或导入的连接列表（名称、主机名、端口、用户名、域、描述）仅保存在本应用在你设备上的私有存储中。已保存的密码使用 Android Keystore 中的密钥通过 AES-256-GCM 加密。应用数据不参与 Android 云备份和设备迁移。卸载应用将删除全部数据。
 
-**网络连接。** 本应用只会通过 RDP 协议连接到你配置的远程计算机和远程桌面网关。你的用户名和密码仅发送给这些服务器用于登录。
+**网络连接。** 本应用只会通过 RDP、SSH 或 VNC 协议连接到你配置的远程计算机和远程桌面网关。你的用户名、密码或 SSH 密钥仅用于登录这些服务器。保存的 SSH 密钥与密码一样加密；你信任的 SSH 服务器密钥保存在设备上，用于发现服务器被替换。
 
 **剪贴板。** 会话打开期间，复制的文本会在设备和远程计算机之间同步，与任何远程桌面客户端相同。
 

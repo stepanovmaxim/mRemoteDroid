@@ -25,8 +25,8 @@ android {
         applicationId = "com.mremotedroid.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.4.0"
+        versionCode = 12
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -99,12 +99,17 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // multi-release jars (JSch, Bouncy Castle): Android uses the base classes
+            excludes += "/META-INF/versions/**"
         }
     }
 }
 
 dependencies {
     implementation(project(":freeRDPCore"))
+    implementation(project(":terminal"))
+    implementation(libs.jsch)
+    implementation(libs.bouncycastle)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)

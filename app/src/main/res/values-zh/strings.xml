@@ -28,7 +28,6 @@
     <string name="field_console">控制台会话 (/admin)</string>
     <string name="field_gateway">远程桌面网关（可选）</string>
     <string name="field_description">描述</string>
-    <string name="edit_rdp_only_hint">目前只能打开 RDP 连接。VNC/SSH 设置会被保存，但不会启动会话。</string>
     <string name="default_connection_name">新建连接</string>
 
     <string name="unlock_title">解锁密码</string>
@@ -118,4 +117,30 @@
     <string name="menu_default_scale">桌面缩放</string>
     <string name="scale_auto">自动（按屏幕密度）</string>
     <string name="default_scale_hint">与 Windows 显示设置中的缩放相同。适用于所有会话，也可在会话菜单中更改。需要 Windows 8.1 / Server 2012 R2 或更高版本。</string>
+
+    <!-- 1.5.0: SSH and VNC -->
+    <string name="remote_connecting">正在连接 %1$s…</string>
+    <string name="remote_closed">连接已关闭</string>
+    <string name="remote_auth_failed">身份验证失败：请检查用户名、密码或密钥</string>
+    <string name="remote_failed">连接失败：%1$s</string>
+    <string name="ssh_bad_key">无法读取私钥。请使用 OpenSSH 或 PEM 格式的密钥文件。</string>
+    <string name="ssh_hostkey_rejected">未信任服务器密钥，连接已关闭。</string>
+    <string name="ssh_copied">已复制</string>
+    <string name="vnc_unsupported_security">服务器要求使用本应用不支持的安全类型（%1$s）。请在服务器设置中允许 VNC 密码或 TLS 身份验证。</string>
+    <string name="vnc_clipboard_sent">剪贴板已发送到服务器：在服务器上按 Ctrl+V 粘贴</string>
+    <string name="hostkey_new_title">新服务器</string>
+    <string name="hostkey_new_message">%1$s\n密钥 %2$s：\n%3$s\n\n如不确定，请与服务器管理员核对指纹。信任此密钥并连接吗？</string>
+    <string name="hostkey_changed_title">服务器密钥已更改！</string>
+    <string name="hostkey_changed_message">%1$s 的密钥已更改：\n%2$s %3$s\n\n重装服务器后会出现这种情况，但也可能表示连接被拦截。只有在知道原因时才信任新密钥。</string>
+    <string name="hostkey_trust">信任并连接</string>
+    <string name="disconnect_confirm">断开与服务器的连接吗？</string>
+    <string name="action_disconnect">断开连接</string>
+    <string name="action_to_list">连接列表</string>
+    <string name="field_private_key">私钥</string>
+    <string name="key_loaded">已加载密钥</string>
+    <string name="key_none">无密钥：使用密码登录</string>
+    <string name="key_choose">选择密钥文件</string>
+    <string name="hint_private_key">OpenSSH 或 PEM 文件（id_ed25519、id_rsa…）。如果密钥受保护，请在密码栏输入其口令。</string>
+    <string name="hint_vnc_login">VNC：密码即 VNC 密码。仅在服务器要求时才需要用户名（使用系统用户的 TigerVNC、macOS）。</string>
+    <string name="about_terminal_note">终端模块已针对 SSH 会话修改，其源代码可在代码仓库中获取。</string>
 </resources>

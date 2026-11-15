@@ -10,6 +10,9 @@ app under **Menu → About → Open-source licenses**.
 | FreeRDP Android client (aFreeRDP): Java code, JNI glue, resources | `freeRDPCore/src/main/java`, `freeRDPCore/src/main/cpp`, `freeRDPCore/src/main/res` | 2013 Thincast Technologies GmbH and FreeRDP contributors | Mozilla Public License 2.0 (a few JNI C files: Apache License 2.0, see each file header) |
 | [OpenSSL](https://www.openssl.org/) 3.4 (libssl, libcrypto) | `freeRDPCore/src/main/jniLibs` | 1998-2024 The OpenSSL Project Authors | Apache License 2.0 |
 | [cJSON](https://github.com/DaveGamble/cJSON) | `freeRDPCore/src/main/jniLibs` | 2009-2017 Dave Gamble and cJSON contributors | MIT License |
+| Termux [terminal-emulator and terminal-view](https://github.com/termux/termux-app) (based on Android Terminal Emulator) | `terminal/` (copied sources; the local pty was replaced by a transport for SSH, see `TerminalSession.java`) | Jack Palevich, Fredrik Fornwall and Termux contributors | Apache License 2.0 |
+| [JSch](https://github.com/mwiede/jsch) 2.28 (mwiede fork), including JZlib and jBCrypt | Gradle dependency | 2002-2015 Atsuhiko Yamanaka, JCraft, Inc.; Matthias Wiedemann and contributors | BSD-style licenses |
+| [Bouncy Castle](https://www.bouncycastle.org/) bcprov 1.81 | Gradle dependency | The Legion of the Bouncy Castle Inc. | MIT License |
 | Android Jetpack: AndroidX, Jetpack Compose, Room, Navigation, Biometric, AppCompat, Material 3, Material Icons | Gradle dependencies | The Android Open Source Project | Apache License 2.0 |
 | Kotlin standard library, kotlinx.coroutines | Gradle dependencies | JetBrains s.r.o. and Kotlin contributors | Apache License 2.0 |
 

@@ -35,6 +35,9 @@ data class EditState(
     val soundMode: Int = NodeEntity.SOUND_OFF,
     val redirectFolder: Boolean = false,
     val description: String = "",
+    /** SSH key: null = unchanged, "" = removed, other = newly loaded key text. */
+    val privateKey: String? = null,
+    val hasStoredKey: Boolean = false,
     /** See [NodeEntity.credentialId]. */
     val credentialId: String? = null,
     val credentials: List<CredentialEntity> = emptyList(),
@@ -83,6 +86,7 @@ class EditViewModel(
                     soundMode = node.soundMode,
                     redirectFolder = node.redirectFolder,
                     description = node.description,
+                    hasStoredKey = node.privateKeyBlob != null,
                     credentialId = node.credentialId,
                     inheritedLogin = inherited
                 )
@@ -122,7 +126,8 @@ class EditViewModel(
             soundMode = s.soundMode,
             redirectFolder = s.redirectFolder,
             credentialId = s.credentialId,
-            description = s.description.trim()
+            description = s.description.trim(),
+            privateKey = s.privateKey
         )
         onDone()
     }

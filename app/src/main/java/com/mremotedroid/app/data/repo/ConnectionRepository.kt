@@ -23,9 +23,11 @@ data class ResolvedLogin(
     val username: String,
     val domain: String,
     val credentialBlob: String?,
-    val gatewayCredentialBlob: String?
+    val gatewayCredentialBlob: String?,
+    val privateKeyBlob: String? = null
 ) {
-    val hasStoredPassword: Boolean get() = credentialBlob != null || gatewayCredentialBlob != null
+    val hasStoredPassword: Boolean
+        get() = credentialBlob != null || gatewayCredentialBlob != null || privateKeyBlob != null
 }
 
 class ConnectionRepository(
@@ -59,7 +61,8 @@ class ConnectionRepository(
         soundMode: Int,
         redirectFolder: Boolean,
         credentialId: String?,
-        description: String
+        description: String,
+        privateKey: String? = null
     ) {
         // Re-encrypt only when the user entered a new password; otherwise keep the old blob.
         val blob = when {
@@ -96,7 +99,12 @@ class ConnectionRepository(
             soundMode = soundMode,
             redirectFolder = redirectFolder,
             credentialId = credentialId,
-            description = description
+            description = description,
+            privateKeyBlob = when {
+                privateKey == null -> existing?.privateKeyBlob
+                privateKey.isEmpty() -> null
+                else -> CredentialCrypto.encrypt(privateKey)
+            }
         )
         dao.upsert(node)
     }
@@ -203,7 +211,8 @@ class ConnectionRepository(
             username = credential?.username ?: node.username,
             domain = credential?.domain ?: node.domain,
             credentialBlob = if (credential != null) credential.credentialBlob else node.credentialBlob,
-            gatewayCredentialBlob = node.gatewayCredentialBlob
+            gatewayCredentialBlob = node.gatewayCredentialBlob,
+            privateKeyBlob = node.privateKeyBlob
         )
     }
 

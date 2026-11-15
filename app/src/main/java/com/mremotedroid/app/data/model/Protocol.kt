@@ -1,8 +1,8 @@
 package com.mremotedroid.app.data.model
 
 /**
- * Connection protocols. Only RDP is launchable in v1 (external client),
- * but VNC/SSH are modelled so that mRemoteNG imports round-trip without loss.
+ * Connection protocols: RDP runs in the embedded FreeRDP engine, SSH and VNC in the
+ * app's own terminal and VNC windows.
  */
 enum class Protocol(val displayName: String, val defaultPort: Int) {
     RDP("RDP", 3389),

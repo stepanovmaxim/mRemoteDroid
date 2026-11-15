@@ -28,7 +28,6 @@
     <string name="field_console">Sessione console (/admin)</string>
     <string name="field_gateway">Gateway RD (facoltativo)</string>
     <string name="field_description">Descrizione</string>
-    <string name="edit_rdp_only_hint">Per ora si possono aprire solo connessioni RDP. Le impostazioni VNC/SSH vengono salvate, ma non viene avviata alcuna sessione.</string>
     <string name="default_connection_name">Nuova connessione</string>
 
     <string name="unlock_title">Sblocca le password</string>
@@ -118,4 +117,30 @@
     <string name="menu_default_scale">Scala del desktop</string>
     <string name="scale_auto">Automatica (in base alla densità dello schermo)</string>
     <string name="default_scale_hint">Come la scala nelle impostazioni dello schermo di Windows. Vale per tutte le sessioni e si cambia anche dal menu della sessione. Richiede Windows 8.1 / Server 2012 R2 o successivi.</string>
+
+    <!-- 1.5.0: SSH and VNC -->
+    <string name="remote_connecting">Connessione a %1$s…</string>
+    <string name="remote_closed">Connessione chiusa</string>
+    <string name="remote_auth_failed">Autenticazione non riuscita: controlla nome utente, password o chiave</string>
+    <string name="remote_failed">Connessione non riuscita: %1$s</string>
+    <string name="ssh_bad_key">Impossibile leggere la chiave privata. Usa un file di chiave OpenSSH o PEM.</string>
+    <string name="ssh_hostkey_rejected">La chiave del server non è stata considerata attendibile, la connessione è stata chiusa.</string>
+    <string name="ssh_copied">Copiato</string>
+    <string name="vnc_unsupported_security">Il server richiede un tipo di sicurezza non supportato (%1$s). Consenti l’autenticazione con password VNC o TLS nelle impostazioni del server.</string>
+    <string name="vnc_clipboard_sent">Appunti inviati al server: incollali lì con Ctrl+V</string>
+    <string name="hostkey_new_title">Nuovo server</string>
+    <string name="hostkey_new_message">%1$s\nChiave %2$s:\n%3$s\n\nSe non sei sicuro, verifica l’impronta con l’amministratore del server. Considerare attendibile questa chiave e connettersi?</string>
+    <string name="hostkey_changed_title">La chiave del server è cambiata!</string>
+    <string name="hostkey_changed_message">La chiave di %1$s è cambiata:\n%2$s %3$s\n\nSuccede dopo la reinstallazione del server, ma può anche indicare che qualcuno intercetta la connessione. Considera attendibile la nuova chiave solo se sai perché è cambiata.</string>
+    <string name="hostkey_trust">Considera attendibile e connetti</string>
+    <string name="disconnect_confirm">Disconnettersi dal server?</string>
+    <string name="action_disconnect">Disconnetti</string>
+    <string name="action_to_list">Elenco connessioni</string>
+    <string name="field_private_key">Chiave privata</string>
+    <string name="key_loaded">Chiave caricata</string>
+    <string name="key_none">Nessuna chiave: accesso con password</string>
+    <string name="key_choose">Scegli file della chiave</string>
+    <string name="hint_private_key">File OpenSSH o PEM (id_ed25519, id_rsa…). Se la chiave è protetta, inserisci la passphrase come password.</string>
+    <string name="hint_vnc_login">VNC: la password è la password VNC. Il nome utente serve solo ai server che lo chiedono (TigerVNC con utenti di sistema, macOS).</string>
+    <string name="about_terminal_note">Il modulo del terminale è stato modificato per le sessioni SSH; il codice sorgente è disponibile nel repository.</string>
 </resources>

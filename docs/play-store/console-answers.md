@@ -44,9 +44,9 @@
 ## Разрешения на службы переднего плана (Foreground service permissions)
 Тип: **FOREGROUND_SERVICE_SPECIAL_USE**. Описание (англ.):
 
-> mRemoteDroid is a remote desktop (RDP) client. While the user has a remote desktop
+> mRemoteDroid is a remote desktop (RDP), SSH and VNC client. While the user has a remote
 > session open, a foreground service with an ongoing notification ("Connected: host")
-> keeps the RDP network connection alive when the screen turns off or the user switches
+> keeps the network connection alive when the screen turns off or the user switches
 > to another app. Without it the system suspends the app's network access and the
 > session to the remote computer drops. The service starts only when the user opens a
 > session and stops as soon as the last session is closed. The user can return to the
