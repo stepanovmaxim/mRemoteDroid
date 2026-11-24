@@ -25,8 +25,8 @@ android {
         applicationId = "com.mremotedroid.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.6.0"
+        versionCode = 14
+        versionName = "1.6.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -80,6 +80,14 @@ android {
         // half-translated; Android 13+ also lists these in the per-app language setting.
         localeFilters += listOf("en", "ru", "de", "es", "fr", "it", "zh")
         generateLocaleConfig = true
+    }
+
+    packaging {
+        jniLibs {
+            // FreeRDP is built for 64-bit only. A library's 32-bit .so (androidx graphics-path)
+            // made Google Play offer the app to 32-bit phones, where RDP then crashed.
+            excludes += listOf("lib/armeabi-v7a/**", "lib/x86/**")
+        }
     }
 
     splits {

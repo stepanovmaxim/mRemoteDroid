@@ -183,7 +183,9 @@ public class GlobalApp extends Application implements LibFreeRDP.EventListener
 		if (GlobalApp.sessionMap.containsKey(instance))
 		{
 			GlobalApp.sessionMap.remove(instance);
-			LibFreeRDP.freeInstance(instance);
+			// Freeing waits for the session thread to end (it may still be connecting),
+			// so keep it off the main thread.
+			new Thread(() -> LibFreeRDP.freeInstance(instance), "freerdp-free").start();
 			notifySessionsChanged();
 		}
 	}

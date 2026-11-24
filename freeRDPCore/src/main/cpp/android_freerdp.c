@@ -728,7 +728,25 @@ JNIEXPORT void JNICALL Java_com_freerdp_freerdpcore_services_LibFreeRDP_freerdp_
 	freerdp* inst = (freerdp*)instance;
 
 	if (inst)
+	{
+		androidContext* ctx = (androidContext*)inst->context;
+
+		/* A session closed while still connecting: its thread may be inside freerdp_connect
+		 * (e.g. waiting for the TCP connection). Freeing the context under it crashes, so stop
+		 * it and wait; if it does not end, leak the context rather than free it in use. */
+		if (ctx && ctx->thread)
+		{
+			freerdp_abort_connect_context(inst->context);
+			if (WaitForSingleObject(ctx->thread, 20000) != WAIT_OBJECT_0)
+			{
+				WLog_ERR(TAG, "session thread still running, context not freed");
+				return;
+			}
+			CloseHandle(ctx->thread);
+			ctx->thread = NULL;
+		}
 		freerdp_client_context_free(inst->context);
+	}
 
 #if defined(WITH_GPROF)
 	moncleanup();

@@ -73,6 +73,10 @@ object EmbeddedRdpLauncher {
             )
             return Result.Ok
         }
+        // without the native FreeRDP stack (failed to load) SessionActivity would crash
+        if ((context.applicationContext as? com.mremotedroid.app.MRemoteApp)?.embeddedRdpAvailable == false) {
+            return Result.Error(context.getString(R.string.msg_launch_failed))
+        }
         if (login.tunnel != null) {
             if (node.hostname.isBlank()) return Result.Error(context.getString(R.string.msg_launch_failed))
             return Result.Tunnel(RdpTunnelStart(context, node, login).also { it.start() })
