@@ -44,6 +44,7 @@ object MRemoteNgImporter {
         var pwOk = 0
         var pwFail = 0
         var sortCounter = 0
+        val tunnelNames = HashMap<String, String>()
 
         var event = parser.eventType
         while (event != XmlPullParser.END_DOCUMENT) {
@@ -106,8 +107,11 @@ object MRemoteNgImporter {
                                     gatewayDomain = if (gatewayOwnLogin) attr(parser, "RDGatewayDomain").orEmpty() else "",
                                     gatewayCredentialBlob = gatewayPlain?.let { CredentialCrypto.encrypt(it) },
                                     soundMode = parseSound(attr(parser, "RedirectSound")),
-                                    description = attr(parser, "Descr").orEmpty()
+                                    description = attr(parser, "Descr").orEmpty(),
+                                    macAddress = attr(parser, "MacAddress").orEmpty().trim()
                                 )
+                                attr(parser, "SSHTunnelConnectionName")?.trim()?.takeIf { it.isNotEmpty() }
+                                    ?.let { tunnelNames[id] = it }
                                 // A connection node may still contain nested nodes in malformed
                                 // files; push its id so any children attach sensibly.
                                 parentStack.addLast(id)
@@ -124,7 +128,13 @@ object MRemoteNgImporter {
             event = parser.next()
         }
 
-        return Result(nodes, folders, connections, pwOk, pwFail)
+        // tunnels are named in the file: link them to the SSH connection of that name
+        val sshByName = nodes.filter { it.nodeType == NodeEntity.TYPE_CONNECTION && it.protocol == Protocol.SSH.name }
+            .groupBy { it.name }.mapValues { it.value.first().id }
+        val linked = nodes.map { n ->
+            tunnelNames[n.id]?.let(sshByName::get)?.takeIf { it != n.id }?.let { n.copy(sshTunnelId = it) } ?: n
+        }
+        return Result(linked, folders, connections, pwOk, pwFail)
     }
 
     private fun attr(parser: XmlPullParser, name: String): String? {

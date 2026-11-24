@@ -92,6 +92,15 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Color
 import com.mremotedroid.app.security.BiometricGate
+import com.mremotedroid.app.launch.Reachability
+import com.mremotedroid.app.launch.RdpTunnelStart
+import com.mremotedroid.app.remote.SessionUi
+import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,6 +134,26 @@ fun ConnectionTreeScreen(
     var showExportDialog by remember { mutableStateOf(false) }
     var pendingExportPassword by remember { mutableStateOf<String?>(null) }
     var biometricOn by remember { mutableStateOf(vm.biometricLockEnabled) }
+    var tunnelStart by remember { mutableStateOf<RdpTunnelStart?>(null) }
+    val showReachability by vm.showReachability.collectAsStateWithLifecycle()
+    val reachable by vm.reachable.collectAsStateWithLifecycle()
+    val names by vm.names.collectAsStateWithLifecycle()
+
+    LaunchedEffect(rows, showReachability) { vm.refreshReachability() }
+    LifecycleResumeEffect(Unit) {
+        vm.refreshReachability()
+        onPauseOrDispose { }
+    }
+
+    fun wake(node: NodeEntity) {
+        vm.wake(node) { valid ->
+            Toast.makeText(
+                context,
+                if (valid) context.getString(R.string.wol_sent, node.name) else context.getString(R.string.wol_bad_mac),
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
 
     val openDocuments = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -153,11 +182,10 @@ fun ConnectionTreeScreen(
 
     // Sessions always run in the embedded FreeRDP engine.
     fun connect(node: NodeEntity, login: ResolvedLogin) {
-        val res = EmbeddedRdpLauncher.launch(context, node, vm.decrypted(login))
-        if (res is EmbeddedRdpLauncher.Result.Error) {
-            Toast.makeText(context, res.message, Toast.LENGTH_LONG).show()
-        } else {
-            vm.markConnected(context, node)
+        when (val res = EmbeddedRdpLauncher.launch(context, node, vm.decrypted(login))) {
+            is EmbeddedRdpLauncher.Result.Error -> Toast.makeText(context, res.message, Toast.LENGTH_LONG).show()
+            is EmbeddedRdpLauncher.Result.Tunnel -> tunnelStart = res.start
+            EmbeddedRdpLauncher.Result.Ok -> vm.markConnected(context, node)
         }
     }
 
@@ -274,6 +302,15 @@ fun ConnectionTreeScreen(
                                 onClick = { overflowOpen = false; showScaleDialog = true }
                             )
                             DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_reachability)) },
+                                leadingIcon = { Icon(Icons.Default.NetworkCheck, null) },
+                                trailingIcon = { if (showReachability) Icon(Icons.Default.Check, null) },
+                                onClick = {
+                                    vm.setShowReachability(!showReachability)
+                                    overflowOpen = false
+                                }
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_biometric)) },
                                 leadingIcon = { Icon(Icons.Default.Fingerprint, null) },
                                 trailingIcon = { if (biometricOn) Icon(Icons.Default.Check, null) },
@@ -349,7 +386,10 @@ fun ConnectionTreeScreen(
                                 onDelete = { vm.delete(node) },
                                 onAddHere = {},
                                 onFolderLogin = {},
-                                onAddShortcut = { addShortcut(node) }
+                                onAddShortcut = { addShortcut(node) },
+                                reach = reachable[node.id].takeIf { showReachability },
+                                tunnelName = node.sshTunnelId?.let(names::get),
+                                onWake = { wake(node) }
                             )
                         }
                         item(key = "recent-divider") { HorizontalDivider() }
@@ -369,7 +409,10 @@ fun ConnectionTreeScreen(
                             onDelete = { vm.delete(row.node) },
                             onAddHere = { onAddConnection(row.node.id) },
                             onFolderLogin = { folderLoginFor = row.node },
-                            onAddShortcut = { addShortcut(row.node) }
+                            onAddShortcut = { addShortcut(row.node) },
+                            reach = reachable[row.node.id].takeIf { showReachability },
+                            tunnelName = row.node.sshTunnelId?.let(names::get),
+                            onWake = { wake(row.node) }
                         )
                     }
                 }
@@ -388,6 +431,51 @@ fun ConnectionTreeScreen(
 
     if (showScaleDialog) {
         DefaultScaleDialog(onDismiss = { showScaleDialog = false })
+    }
+
+    tunnelStart?.let { start ->
+        val state by start.state.collectAsStateWithLifecycle()
+        // host key and password questions of the tunnel, as in SSH sessions
+        LaunchedEffect(start) {
+            var dialog: android.app.AlertDialog? = null
+            try {
+                start.prompt.collect { prompt ->
+                    dialog = if (activity != null) SessionUi.showPrompt(activity, start, prompt, dialog) else null
+                }
+            } finally {
+                dialog?.dismiss()
+            }
+        }
+        LaunchedEffect(state) {
+            when (val s = state) {
+                RdpTunnelStart.State.Done -> {
+                    vm.markConnected(context, vm.nodeById(start.nodeId) ?: return@LaunchedEffect)
+                    tunnelStart = null
+                }
+                is RdpTunnelStart.State.Failed -> {
+                    resultText = s.message
+                    tunnelStart = null
+                }
+                RdpTunnelStart.State.Connecting -> Unit
+            }
+        }
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(start.title) },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(24.dp))
+                    Spacer(Modifier.width(16.dp))
+                    Text(stringResource(R.string.tunnel_connecting, start.tunnelName))
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { start.disconnect(); tunnelStart = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
 
     resultText?.let { text ->
@@ -439,6 +527,7 @@ fun ConnectionTreeScreen(
 }
 
 private val SessionOpenColor = Color(0xFF2E7D32)
+private val ReachableColor = Color(0xFF43A047)
 
 /** The recent section only helps when the list is longer than a screenful of glances. */
 private const val RECENT_MIN_ROWS = 5
@@ -474,7 +563,10 @@ private fun TreeRowItem(
     onDelete: () -> Unit,
     onAddHere: () -> Unit,
     onFolderLogin: () -> Unit,
-    onAddShortcut: () -> Unit
+    onAddShortcut: () -> Unit,
+    reach: Reachability.Status? = null,
+    tunnelName: String? = null,
+    onWake: () -> Unit = {}
 ) {
     val isFolder = node.nodeType == NodeEntity.TYPE_FOLDER
     var menuOpen by remember { mutableStateOf(false) }
@@ -524,11 +616,31 @@ private fun TreeRowItem(
             Text(node.name, style = MaterialTheme.typography.bodyLarge)
             if (!isFolder) {
                 val proto = runCatching { Protocol.valueOf(node.protocol) }.getOrDefault(Protocol.RDP)
-                Text(
-                    "${proto.displayName}  ${node.hostname}:${node.port}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (reach != null) {
+                        val (color, label) = when (reach) {
+                            Reachability.Status.UP -> ReachableColor to R.string.reach_up
+                            Reachability.Status.DOWN -> MaterialTheme.colorScheme.error to R.string.reach_down
+                            Reachability.Status.CHECKING -> MaterialTheme.colorScheme.outlineVariant to R.string.reach_checking
+                        }
+                        val description = stringResource(label)
+                        Box(
+                            Modifier
+                                .size(8.dp)
+                                .background(color, CircleShape)
+                                .semantics { contentDescription = description }
+                        )
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(
+                        buildString {
+                            append(proto.displayName).append("  ").append(node.hostname).append(':').append(node.port)
+                            if (tunnelName != null) append("  ").append(stringResource(R.string.via_tunnel, tunnelName))
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 if (sessionOpen) {
                     Text(
                         stringResource(R.string.session_open_hint),
@@ -565,6 +677,13 @@ private fun TreeRowItem(
                         leadingIcon = { Icon(Icons.Default.AddToHomeScreen, null) },
                         onClick = { menuOpen = false; onAddShortcut() }
                     )
+                    if (node.macAddress.isNotBlank()) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_wake)) },
+                            leadingIcon = { Icon(Icons.Default.PowerSettingsNew, null) },
+                            onClick = { menuOpen = false; onWake() }
+                        )
+                    }
                 }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_delete)) },

@@ -13,6 +13,7 @@ app under **Menu → About → Open-source licenses**.
 | Termux [terminal-emulator and terminal-view](https://github.com/termux/termux-app) (based on Android Terminal Emulator) | `terminal/` (copied sources; the local pty was replaced by a transport for SSH, see `TerminalSession.java`) | Jack Palevich, Fredrik Fornwall and Termux contributors | Apache License 2.0 |
 | [JSch](https://github.com/mwiede/jsch) 2.28 (mwiede fork), including JZlib and jBCrypt | Gradle dependency | 2002-2015 Atsuhiko Yamanaka, JCraft, Inc.; Matthias Wiedemann and contributors | BSD-style licenses |
 | [Bouncy Castle](https://www.bouncycastle.org/) bcprov 1.81 | Gradle dependency | The Legion of the Bouncy Castle Inc. | MIT License |
+| [Google Play In-App Review](https://developer.android.com/guide/playcore/in-app-review) (review-ktx 2.0) | Gradle dependency; only shows Google Play's rating dialog | Google LLC | [Play Core SDK Terms of Service](https://developer.android.com/guide/playcore/license) (not open source) |
 | Android Jetpack: AndroidX, Jetpack Compose, Room, Navigation, Biometric, AppCompat, Material 3, Material Icons | Gradle dependencies | The Android Open Source Project | Apache License 2.0 |
 | Kotlin standard library, kotlinx.coroutines | Gradle dependencies | JetBrains s.r.o. and Kotlin contributors | Apache License 2.0 |
 

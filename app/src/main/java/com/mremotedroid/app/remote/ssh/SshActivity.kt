@@ -86,11 +86,16 @@ class SshActivity : ComponentActivity() {
             nodeId = node.id,
             title = node.name.ifBlank { node.hostname },
             tag = tag,
-            host = node.hostname,
-            port = if (node.port in 1..65535) node.port else 22,
-            username = login.username,
-            password = login.password,
-            privateKey = login.privateKey,
+            target = SshTarget(
+                title = node.name.ifBlank { node.hostname },
+                host = node.hostname,
+                port = if (node.port in 1..65535) node.port else 22,
+                username = login.username,
+                password = login.password,
+                privateKey = login.privateKey
+            ),
+            jump = login.tunnel,
+            forwards = PortForward.parse(node.portForwards).forwards,
             client = sessionClient
         )
         RemoteSessions.register(this, s, RemoteSessions.intent(this, SshActivity::class.java, tag))

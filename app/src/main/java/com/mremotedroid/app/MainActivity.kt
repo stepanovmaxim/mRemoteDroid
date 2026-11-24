@@ -19,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.mremotedroid.app.data.repo.ConnectionRepository
 import com.mremotedroid.app.launch.ConnectionShortcuts
+import com.mremotedroid.app.launch.ReviewPrompt
 import com.mremotedroid.app.data.settings.AppSettings
 import com.mremotedroid.app.ui.about.AboutScreen
 import com.mremotedroid.app.ui.credentials.CredentialsScreen
@@ -46,11 +47,19 @@ class MainActivity : FragmentActivity() {
         accept(intent)
     }
 
+    private lateinit var settings: AppSettings
+
+    override fun onResume() {
+        super.onResume()
+        // back in the list, typically from a session: a good moment to ask for a rating
+        ReviewPrompt.maybeAsk(this, settings)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val repo = (application as MRemoteApp).repository
-        val settings = AppSettings(this)
+        settings = AppSettings(this)
         setContent { MRemoteTheme { AppNav(repo, settings, incomingIntent) } }
         if (savedInstanceState == null) accept(intent)
         // Not gated on savedInstanceState: after a crash Android restores the task

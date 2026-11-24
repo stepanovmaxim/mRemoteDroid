@@ -24,11 +24,17 @@ data class ResolvedLogin(
     val domain: String,
     val credentialBlob: String?,
     val gatewayCredentialBlob: String?,
-    val privateKeyBlob: String? = null
+    val privateKeyBlob: String? = null,
+    /** The SSH connection to go through, with its own login; null = direct. */
+    val tunnel: ResolvedTunnel? = null
 ) {
     val hasStoredPassword: Boolean
-        get() = credentialBlob != null || gatewayCredentialBlob != null || privateKeyBlob != null
+        get() = credentialBlob != null || gatewayCredentialBlob != null || privateKeyBlob != null ||
+            tunnel?.login?.hasStoredPassword == true
 }
+
+/** The SSH server a connection is tunnelled through. */
+data class ResolvedTunnel(val node: NodeEntity, val login: ResolvedLogin)
 
 class ConnectionRepository(
     private val dao: NodeDao,
@@ -62,7 +68,10 @@ class ConnectionRepository(
         redirectFolder: Boolean,
         credentialId: String?,
         description: String,
-        privateKey: String? = null
+        privateKey: String? = null,
+        sshTunnelId: String? = existing?.sshTunnelId,
+        portForwards: String = existing?.portForwards.orEmpty(),
+        macAddress: String = existing?.macAddress.orEmpty()
     ) {
         // Re-encrypt only when the user entered a new password; otherwise keep the old blob.
         val blob = when {
@@ -104,7 +113,10 @@ class ConnectionRepository(
                 privateKey == null -> existing?.privateKeyBlob
                 privateKey.isEmpty() -> null
                 else -> CredentialCrypto.encrypt(privateKey)
-            }
+            },
+            sshTunnelId = sshTunnelId?.takeIf { it != existing?.id },
+            portForwards = portForwards,
+            macAddress = macAddress
         )
         dao.upsert(node)
     }
@@ -137,7 +149,13 @@ class ConnectionRepository(
         }
         collect(id)
         dao.deleteByIds(toDelete)
+        dao.clearTunnels(toDelete)
     }
+
+    /** SSH connections that can carry other connections, for the tunnel picker. */
+    suspend fun sshConnections(): List<NodeEntity> =
+        dao.getAll().filter { it.nodeType == NodeEntity.TYPE_CONNECTION && it.protocol == "SSH" }
+            .sortedBy { it.name.lowercase() }
 
     fun decrypt(blob: String?): String = CredentialCrypto.decrypt(blob)
 
@@ -200,8 +218,13 @@ class ConnectionRepository(
     private fun resolveLogin(
         node: NodeEntity,
         nodes: Map<String, NodeEntity>,
-        saved: Map<String, CredentialEntity>
+        saved: Map<String, CredentialEntity>,
+        withTunnel: Boolean = true
     ): ResolvedLogin {
+        // one hop only: the tunnel's own tunnel setting is not followed
+        val tunnel = node.sshTunnelId?.takeIf { withTunnel && it != node.id }?.let(nodes::get)
+            ?.takeIf { it.nodeType == NodeEntity.TYPE_CONNECTION && it.protocol == "SSH" }
+            ?.let { ResolvedTunnel(it, resolveLogin(it, nodes, saved, withTunnel = false)) }
         val credential = when (node.credentialId) {
             null -> null
             NodeEntity.CREDENTIAL_INHERIT -> folderCredential(node.parentId, nodes, saved)
@@ -212,7 +235,8 @@ class ConnectionRepository(
             domain = credential?.domain ?: node.domain,
             credentialBlob = if (credential != null) credential.credentialBlob else node.credentialBlob,
             gatewayCredentialBlob = node.gatewayCredentialBlob,
-            privateKeyBlob = node.privateKeyBlob
+            privateKeyBlob = node.privateKeyBlob,
+            tunnel = tunnel
         )
     }
 
@@ -237,7 +261,8 @@ class ConnectionRepository(
         val existing = dao.getAll()
         val folders = existing.filter { it.nodeType == NodeEntity.TYPE_FOLDER }
             .associateTo(HashMap()) { (it.parentId to it.name.lowercase()) to it.id }
-        val connections = existing.filter { it.nodeType == NodeEntity.TYPE_CONNECTION }.mapTo(HashSet(), ::key)
+        val connections = existing.filter { it.nodeType == NodeEntity.TYPE_CONNECTION }
+            .associateTo(HashMap()) { key(it) to it.id }
         val ids = HashMap<String, String>()
         val added = ArrayList<NodeEntity>()
         var duplicates = 0
@@ -253,13 +278,20 @@ class ConnectionRepository(
                     ids[node.id] = node.id
                     added += node.copy(parentId = parent)
                 }
-            } else if (connections.add(key(node))) {
-                added += node.copy(parentId = parent)
             } else {
-                duplicates++
+                val known = connections[key(node)]
+                if (known == null) {
+                    connections[key(node)] = node.id
+                    ids[node.id] = node.id
+                    added += node.copy(parentId = parent)
+                } else {
+                    // tunnels through a skipped duplicate go through the existing connection
+                    ids[node.id] = known
+                    duplicates++
+                }
             }
         }
-        dao.upsertAll(added)
+        dao.upsertAll(added.map { n -> n.copy(sshTunnelId = n.sshTunnelId?.let { ids[it] ?: it }) })
         return MergeResult(
             connections = added.count { it.nodeType == NodeEntity.TYPE_CONNECTION },
             folders = added.count { it.nodeType == NodeEntity.TYPE_FOLDER },

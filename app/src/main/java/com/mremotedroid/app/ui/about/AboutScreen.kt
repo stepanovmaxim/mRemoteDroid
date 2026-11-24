@@ -95,6 +95,12 @@ private val components = listOf(
         "licenses/bouncycastle-mit.txt"
     ),
     Component(
+        "Google Play In-App Review",
+        "Copyright © Google LLC",
+        "Play Core SDK Terms of Service",
+        "licenses/play-core.txt"
+    ),
+    Component(
         "Android Jetpack (AndroidX, Jetpack Compose, Room, Navigation, Biometric, Material 3, Material Icons)",
         "Copyright © The Android Open Source Project",
         "Apache License 2.0",

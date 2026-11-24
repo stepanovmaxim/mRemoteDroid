@@ -1,0 +1,11 @@
+Google Play In-App Review library (com.google.android.play:review, review-ktx)
+Copyright Google LLC
+
+This library is used only to show Google Play's own rating dialog. It is
+provided by Google under the Play Core Software Development Kit Terms of
+Service:
+
+https://developer.android.com/guide/playcore/license
+
+It is not open source. Builds of mRemoteDroid installed outside Google Play
+never show the dialog.

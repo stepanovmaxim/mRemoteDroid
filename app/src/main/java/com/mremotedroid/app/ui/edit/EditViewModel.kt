@@ -42,7 +42,13 @@ data class EditState(
     val credentialId: String? = null,
     val credentials: List<CredentialEntity> = emptyList(),
     /** Name of the login the parent folders provide, if any. */
-    val inheritedLogin: String? = null
+    val inheritedLogin: String? = null,
+    /** SSH connection to go through; null = direct. */
+    val sshTunnelId: String? = null,
+    /** SSH connections that can serve as the tunnel. */
+    val sshConnections: List<NodeEntity> = emptyList(),
+    val portForwards: String = "",
+    val macAddress: String = ""
 ) {
     /** Whether this connection's own username and password are the ones used. */
     val usesOwnLogin: Boolean
@@ -88,7 +94,10 @@ class EditViewModel(
                     description = node.description,
                     hasStoredKey = node.privateKeyBlob != null,
                     credentialId = node.credentialId,
-                    inheritedLogin = inherited
+                    inheritedLogin = inherited,
+                    sshTunnelId = node.sshTunnelId,
+                    portForwards = node.portForwards,
+                    macAddress = node.macAddress
                 )
             } else {
                 EditState(
@@ -98,6 +107,8 @@ class EditViewModel(
                     inheritedLogin = inherited
                 )
             }
+            val ssh = repo.sshConnections().filter { it.id != node?.id }
+            update { it.copy(sshConnections = ssh) }
             repo.observeCredentials().collect { list -> update { it.copy(credentials = list) } }
         }
     }
@@ -127,7 +138,10 @@ class EditViewModel(
             redirectFolder = s.redirectFolder,
             credentialId = s.credentialId,
             description = s.description.trim(),
-            privateKey = s.privateKey
+            privateKey = s.privateKey,
+            sshTunnelId = s.sshTunnelId,
+            portForwards = if (s.protocol == Protocol.SSH) s.portForwards.trim() else "",
+            macAddress = s.macAddress.trim()
         )
         onDone()
     }

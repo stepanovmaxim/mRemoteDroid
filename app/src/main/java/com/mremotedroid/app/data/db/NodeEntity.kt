@@ -48,6 +48,12 @@ data class NodeEntity(
     val redirectFolder: Boolean = false,
     /** SSH private key (OpenSSH or PEM text), encrypted like passwords; null = none. */
     @ColumnInfo(name = "private_key_blob") val privateKeyBlob: String? = null,
+    /** Id of the SSH connection this one is reached through (a tunnel or jump host); null = direct. */
+    val sshTunnelId: String? = null,
+    /** SSH port forwards, one per line, see [com.mremotedroid.app.remote.ssh.PortForward]. */
+    val portForwards: String = "",
+    /** MAC address for Wake-on-LAN; empty = none. */
+    val macAddress: String = "",
 
     val description: String = "",
 

@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mremotedroid.app.data.db.NodeEntity
 import com.mremotedroid.app.data.model.Protocol
+import com.mremotedroid.app.launch.WakeOnLan
+import com.mremotedroid.app.remote.ssh.PortForward
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -248,6 +250,41 @@ fun EditConnectionScreen(
             }
 
             if (s.protocol == Protocol.SSH) PrivateKeyField(s, vm)
+
+            TunnelPicker(s) { id -> vm.update { it.copy(sshTunnelId = id) } }
+
+            if (s.protocol == Protocol.SSH) {
+                val invalid = remember(s.portForwards) { PortForward.parse(s.portForwards).invalid }
+                OutlinedTextField(
+                    value = s.portForwards,
+                    onValueChange = { v -> vm.update { it.copy(portForwards = v) } },
+                    label = { Text(stringResource(R.string.field_port_forwards)) },
+                    placeholder = { Text("L 8080:intranet:80\nD 1080") },
+                    isError = invalid.isNotEmpty(),
+                    supportingText = {
+                        Text(
+                            if (invalid.isNotEmpty()) stringResource(R.string.forward_invalid, invalid.first())
+                            else stringResource(R.string.hint_port_forwards)
+                        )
+                    },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            val badMac = s.macAddress.isNotBlank() && WakeOnLan.parseMac(s.macAddress) == null
+            OutlinedTextField(
+                value = s.macAddress,
+                onValueChange = { v -> vm.update { it.copy(macAddress = v) } },
+                label = { Text(stringResource(R.string.field_mac)) },
+                placeholder = { Text("00:11:22:33:44:55") },
+                isError = badMac,
+                supportingText = {
+                    Text(stringResource(if (badMac) R.string.wol_bad_mac else R.string.hint_mac))
+                },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
             if (s.protocol == Protocol.VNC) {
                 Text(
                     stringResource(R.string.hint_vnc_login),
@@ -305,6 +342,41 @@ private fun LoginPicker(s: EditState, onSelect: (String?) -> Unit) {
                 }
             }
         }
+    }
+}
+
+/** The SSH connection to reach this one through: a tunnel for RDP/VNC, a jump host for SSH. */
+@Composable
+private fun TunnelPicker(s: EditState, onSelect: (String?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val none = stringResource(R.string.tunnel_none)
+    val current = s.sshConnections.firstOrNull { it.id == s.sshTunnelId }?.name ?: none
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            stringResource(if (s.protocol == Protocol.SSH) R.string.field_jump_host else R.string.field_ssh_tunnel),
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Box {
+            OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(current, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+            }
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                DropdownMenuItem(text = { Text(none) }, onClick = { open = false; onSelect(null) })
+                s.sshConnections.forEach { ssh ->
+                    DropdownMenuItem(
+                        text = { Text("${ssh.name}  (${ssh.hostname})") },
+                        onClick = { open = false; onSelect(ssh.id) }
+                    )
+                }
+            }
+        }
+        Text(
+            stringResource(if (s.sshConnections.isEmpty()) R.string.hint_tunnel_empty else R.string.hint_tunnel),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

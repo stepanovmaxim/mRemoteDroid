@@ -5,6 +5,9 @@ import android.util.Log
 import com.mremotedroid.app.R
 import com.mremotedroid.app.remote.Prompt
 import com.mremotedroid.app.remote.RemoteSession
+import com.mremotedroid.app.remote.ssh.SshConnect
+import com.mremotedroid.app.remote.ssh.SshTarget
+import com.mremotedroid.app.remote.ssh.SshTunnel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.EOFException
@@ -18,11 +21,15 @@ class VncSession(
     nodeId: String,
     title: String,
     tag: String,
-    host: String,
-    port: Int,
+    private val host: String,
+    private val port: Int,
     username: String,
-    password: String?
+    password: String?,
+    /** SSH server to reach the VNC server through; null = direct. */
+    private val tunnelTarget: SshTarget? = null
 ) : RemoteSession(nodeId, title, tag) {
+
+    @Volatile private var tunnel: SshTunnel? = null
 
     sealed interface State {
         data object Connecting : State
@@ -80,7 +87,24 @@ class VncSession(
     fun connect() {
         Thread({
             try {
-                client.run()
+                if (tunnelTarget != null) {
+                    val t = SshTunnel(appContext, tunnelTarget)
+                    tunnel = t
+                    try {
+                        t.open(ask = { ask(it) })
+                    } catch (e: Exception) {
+                        if (!closed) Log.w(TAG, "tunnel failed", e)
+                        end(
+                            if (closed) appContext.getString(R.string.remote_closed)
+                            else appContext.getString(R.string.tunnel_failed, tunnelTarget.title, SshConnect.describe(appContext, e))
+                        )
+                        return@Thread
+                    }
+                    if (closed) return@Thread end(appContext.getString(R.string.remote_closed))
+                    client.run("127.0.0.1", t.forward(host, port))
+                } else {
+                    client.run()
+                }
                 end(appContext.getString(R.string.remote_closed))
             } catch (e: Exception) {
                 Log.w(TAG, "vnc session ended", e)
@@ -101,6 +125,7 @@ class VncSession(
 
     private fun end(message: String) {
         client.close()
+        tunnel?.close()
         _state.value = State.Ended(message)
     }
 
@@ -112,6 +137,7 @@ class VncSession(
         closed = true
         answer(null)
         client.close()
+        tunnel?.close()
     }
 
     private companion object {

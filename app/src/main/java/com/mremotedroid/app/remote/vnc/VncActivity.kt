@@ -53,7 +53,8 @@ class VncActivity : ComponentActivity(), VncView.Listener {
                 host = node.hostname,
                 port = if (node.port in 1..65535) node.port else 5900,
                 username = login.username,
-                password = login.password
+                password = login.password,
+                tunnelTarget = login.tunnel
             ).also { RemoteSessions.register(this, it, RemoteSessions.intent(this, VncActivity::class.java, tag)) }
         }
         session = s

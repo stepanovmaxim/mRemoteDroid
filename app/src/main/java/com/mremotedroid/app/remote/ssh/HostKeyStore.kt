@@ -23,16 +23,15 @@ class HostKeyStore(context: Context) : HostKeyRepository {
 
     private data class Entry(val host: String, val type: String, val key: String)
 
-    @Synchronized
-    private fun read(): List<Entry> =
+    private fun read(): List<Entry> = synchronized(LOCK) {
         if (!file.exists()) emptyList()
         else file.readLines().mapNotNull { line ->
             val p = line.trim().split(' ')
             if (p.size >= 3) Entry(p[0], p[1], p[2]) else null
         }
+    }
 
-    @Synchronized
-    private fun write(entries: List<Entry>) {
+    private fun write(entries: List<Entry>) = synchronized(LOCK) {
         file.writeText(entries.joinToString("") { "${it.host} ${it.type} ${it.key}\n" })
     }
 
@@ -77,6 +76,9 @@ class HostKeyStore(context: Context) : HostKeyRepository {
     }.toTypedArray()
 
     companion object {
+        /** One lock for every instance: terminals and tunnels share the file. */
+        private val LOCK = Any()
+
         /** The key type is the first string inside the SSH wire-format key blob. */
         fun typeOf(key: ByteArray): String {
             if (key.size < 4) return "unknown"

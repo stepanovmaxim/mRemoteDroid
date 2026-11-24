@@ -8,6 +8,7 @@ import com.freerdp.freerdpcore.presentation.SessionIntents
 import com.mremotedroid.app.data.db.NodeEntity
 import com.mremotedroid.app.data.model.Protocol
 import com.mremotedroid.app.remote.RemoteSessions
+import com.mremotedroid.app.remote.ssh.SshTarget
 import com.mremotedroid.app.remote.ssh.SshActivity
 import com.mremotedroid.app.remote.vnc.VncActivity
 import java.net.URLEncoder
@@ -25,6 +26,8 @@ object EmbeddedRdpLauncher {
     sealed interface Result {
         data object Ok : Result
         data class Error(val message: String) : Result
+        /** An RDP session waits for its SSH tunnel; the caller shows its progress and questions. */
+        data class Tunnel(val start: RdpTunnelStart) : Result
     }
 
     /** Brings the already open session for [node] to the front; false if none is open. */
@@ -45,7 +48,9 @@ object EmbeddedRdpLauncher {
         val password: String?,
         val gatewayPassword: String?,
         /** OpenSSH/PEM private key for SSH; the password then unlocks it. */
-        val privateKey: String? = null
+        val privateKey: String? = null,
+        /** SSH server to reach the connection through; null = direct. */
+        val tunnel: SshTarget? = null
     )
 
     private fun activityFor(node: NodeEntity): Class<*>? = when (node.protocol) {
@@ -68,14 +73,33 @@ object EmbeddedRdpLauncher {
             )
             return Result.Ok
         }
+        if (login.tunnel != null) {
+            if (node.hostname.isBlank()) return Result.Error(context.getString(R.string.msg_launch_failed))
+            return Result.Tunnel(RdpTunnelStart(context, node, login).also { it.start() })
+        }
+        return startRdp(context, node, login, node.hostname, node.port, null)
+    }
+
+    /**
+     * Starts FreeRDP for [node] at [host]:[port] (the tunnel's local end when tunnelled);
+     * [gatewayHost] replaces the node's RD gateway address when set.
+     */
+    fun startRdp(
+        context: Context,
+        node: NodeEntity,
+        login: Login,
+        host: String,
+        port: Int,
+        gatewayHost: String?
+    ): Result {
         return try {
             // No explicit size: SessionActivity picks a landscape resolution matching
             // the screen and fits it to the current orientation.
-            val port = if (node.port in 1..65535) node.port else 3389
+            val rdpPort = if (port in 1..65535) port else 3389
             val authority = buildString {
                 if (login.username.isNotBlank()) append(enc(login.username)).append("@")
-                append(node.hostname)
-                append(":").append(port)
+                append(host)
+                append(":").append(rdpPort)
             }
 
             val builder = Uri.Builder()
@@ -89,7 +113,10 @@ object EmbeddedRdpLauncher {
             if (!login.password.isNullOrEmpty()) builder.appendQueryParameter("p", login.password)
             if (node.consoleSession) builder.appendQueryParameter("admin", "") // -> /admin
             if (node.gatewayHostname.isNotBlank()) {
-                builder.appendQueryParameter("gateway", gatewayOptions(node, login.gatewayPassword))
+                builder.appendQueryParameter(
+                    "gateway",
+                    gatewayOptions(node, gatewayHost ?: node.gatewayHostname.trim(), login.gatewayPassword)
+                )
             }
             when (node.soundMode) {
                 NodeEntity.SOUND_DEVICE -> builder.appendQueryParameter("sound", "")
@@ -113,8 +140,8 @@ object EmbeddedRdpLauncher {
     }
 
     /** Value of FreeRDP's /gateway option; no login means the connection's own is reused. */
-    private fun gatewayOptions(node: NodeEntity, password: String?): String {
-        val options = mutableListOf(quoted("g:", node.gatewayHostname.trim()))
+    private fun gatewayOptions(node: NodeEntity, gatewayHost: String, password: String?): String {
+        val options = mutableListOf(quoted("g:", gatewayHost))
         if (node.gatewayUsername.isNotBlank()) {
             options += quoted("u:", node.gatewayUsername)
             if (node.gatewayDomain.isNotBlank()) options += quoted("d:", node.gatewayDomain)

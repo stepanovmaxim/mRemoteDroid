@@ -47,6 +47,9 @@ interface NodeDao {
     @Query("UPDATE nodes SET credentialId = NULL WHERE credentialId = :credentialId")
     suspend fun clearCredential(credentialId: String)
 
+    @Query("UPDATE nodes SET sshTunnelId = NULL WHERE sshTunnelId IN (:ids)")
+    suspend fun clearTunnels(ids: List<String>)
+
     @Query("UPDATE nodes SET lastConnected = :time WHERE id = :id")
     suspend fun setLastConnected(id: String, time: Long)
 

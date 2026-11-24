@@ -65,10 +65,13 @@ class RfbClient(
     private val inflater = Inflater()
     private var zlibBuffer = ByteArray(0)
 
-    /** Connects, authenticates and processes server messages until the connection ends. */
-    fun run() {
+    /**
+     * Connects, authenticates and processes server messages until the connection ends.
+     * Through a tunnel, [connectHost]/[connectPort] are its local end.
+     */
+    fun run(connectHost: String = host, connectPort: Int = port) {
         socket = Socket()
-        socket.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT_MS)
+        socket.connect(InetSocketAddress(connectHost, connectPort), CONNECT_TIMEOUT_MS)
         socket.tcpNoDelay = true
         attachStreams()
         val version = handshakeVersion()

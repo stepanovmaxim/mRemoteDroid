@@ -35,10 +35,15 @@ object MRemoteNgExporter {
         sb.append("KdfIterations=\"$iterations\" FullFileEncryption=\"false\" ")
         sb.append("Protected=\"${esc(protectedAttr)}\" ConfVersion=\"2.6\">\n")
 
+        val names = nodes.associate { it.id to it.name }
+
         fun writeNode(node: NodeEntity, indent: String) {
             val isFolder = node.nodeType == NodeEntity.TYPE_FOLDER
             val children = byParent[node.id].orEmpty()
             val attrs = buildAttributes(node, plaintextPasswordOf, gatewayPasswordOf, filePassword, iterations)
+            // mRemoteNG refers to the tunnel connection by name
+            attrs["SSHTunnelConnectionName"] = node.sshTunnelId?.let(names::get).orEmpty()
+            attrs["InheritSSHTunnelConnectionName"] = "false"
             val attrString = attrs.entries.joinToString(" ") { (k, v) -> "$k=\"${esc(v)}\"" }
 
             if (isFolder) {
@@ -127,7 +132,7 @@ object MRemoteNgExporter {
         a["Connected"] = "false"
         a["PreExtApp"] = ""
         a["PostExtApp"] = ""
-        a["MacAddress"] = ""
+        a["MacAddress"] = node.macAddress
         a["UserField"] = ""
         a["ExtApp"] = ""
         a["VNCCompression"] = "CompNone"

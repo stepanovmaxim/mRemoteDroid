@@ -18,12 +18,16 @@ import com.mremotedroid.app.data.repo.ResolvedLogin
 import com.mremotedroid.app.data.repo.TreeRow
 import com.mremotedroid.app.launch.ConnectionShortcuts
 import com.mremotedroid.app.launch.EmbeddedRdpLauncher
+import com.mremotedroid.app.launch.Reachability
+import com.mremotedroid.app.launch.WakeOnLan
+import com.mremotedroid.app.remote.ssh.SshTarget
 import com.mremotedroid.app.data.settings.AppSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -75,6 +79,11 @@ class TreeViewModel(
             computeRows(nodes, q, sort)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** Connection names by id, to show which SSH connection a tunnel goes through. */
+    val names: StateFlow<Map<String, String>> = repo.observeAll()
+        .map { nodes -> nodes.associate { it.id to it.name } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     private val _message = MutableStateFlow<TreeMessage?>(null)
     val message: StateFlow<TreeMessage?> = _message
 
@@ -109,11 +118,54 @@ class TreeViewModel(
         domain = login.domain,
         password = repo.decrypt(login.credentialBlob),
         gatewayPassword = repo.decrypt(login.gatewayCredentialBlob),
-        privateKey = repo.decrypt(login.privateKeyBlob).ifEmpty { null }
+        privateKey = repo.decrypt(login.privateKeyBlob).ifEmpty { null },
+        tunnel = login.tunnel?.let { t ->
+            SshTarget(
+                title = t.node.name.ifBlank { t.node.hostname },
+                host = t.node.hostname,
+                port = if (t.node.port in 1..65535) t.node.port else 22,
+                username = t.login.username,
+                password = repo.decrypt(t.login.credentialBlob).ifEmpty { null },
+                privateKey = repo.decrypt(t.login.privateKeyBlob).ifEmpty { null }
+            )
+        }
     )
+
+    private val reachability = Reachability(viewModelScope)
+    val reachable: StateFlow<Map<String, Reachability.Status>> = reachability.status
+
+    private val _showReachability = MutableStateFlow(settings.showReachability)
+    val showReachability: StateFlow<Boolean> = _showReachability
+
+    fun setShowReachability(enabled: Boolean) {
+        settings.showReachability = enabled
+        _showReachability.value = enabled
+        if (enabled) refreshReachability(force = true)
+    }
+
+    /** Checks which connections answer; recent results are reused unless [force]. */
+    fun refreshReachability(force: Boolean = false) {
+        if (!_showReachability.value) return
+        viewModelScope.launch { reachability.check(repo.allNodes(), force) }
+    }
+
+    /** Sends Wake-on-LAN packets for [node]; [done] gets whether the MAC address was valid. */
+    fun wake(node: NodeEntity, done: (Boolean) -> Unit) = viewModelScope.launch {
+        val mac = WakeOnLan.parseMac(node.macAddress)
+        if (mac == null) {
+            done(false)
+            return@launch
+        }
+        withContext(Dispatchers.IO) { runCatching { WakeOnLan.send(mac, node.hostname) } }
+        done(true)
+        // give the machine time to boot, then look again
+        kotlinx.coroutines.delay(WAKE_RECHECK_MS)
+        refreshReachability(force = true)
+    }
 
     fun markConnected(context: Context, node: NodeEntity) {
         val appContext = context.applicationContext
+        settings.countLaunch()
         viewModelScope.launch {
             repo.markConnected(node.id)
             ConnectionShortcuts.publishRecent(appContext, repo.recent(RECENT_SHORTCUTS))
@@ -261,6 +313,7 @@ class TreeViewModel(
         const val RECENT_IN_LIST = 3
         const val RECENT_SHORTCUTS = 4
         const val MAX_IMPORT_BYTES = 8 * 1024 * 1024
+        const val WAKE_RECHECK_MS = 30_000L
     }
 
     class Factory(
