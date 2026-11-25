@@ -90,7 +90,7 @@ class HostKeyStore(context: Context) : HostKeyRepository {
         /** The same "SHA256:…" form that ssh-keygen -l prints. */
         fun fingerprint(key: ByteArray): String {
             val digest = MessageDigest.getInstance("SHA-256").digest(key)
-            return "SHA256:" + Base64.encodeToString(digest, Base64.NO_WRAP or Base64.NO_PADDING)
+            return "SHA256:" + java.util.Base64.getEncoder().withoutPadding().encodeToString(digest)
         }
     }
 }

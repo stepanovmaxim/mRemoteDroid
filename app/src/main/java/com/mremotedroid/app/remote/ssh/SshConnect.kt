@@ -135,7 +135,7 @@ object SshConnect {
      * Android has no JCA providers for X25519 and Ed25519 before recent versions, and
      * D8 drops the jar's Java 11+ classes: use JSch's Bouncy Castle implementations.
      */
-    private fun useBouncyCastle() {
+    fun useBouncyCastle() {
         listOf(
             "xdh", "keypairgen.eddsa", "keypairgen_fromprivate.eddsa", "ssh-ed25519", "ssh-ed448",
             "mlkem768", "mlkem1024"

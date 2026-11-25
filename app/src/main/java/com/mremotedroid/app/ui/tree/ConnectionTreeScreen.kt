@@ -96,6 +96,8 @@ import com.mremotedroid.app.launch.Reachability
 import com.mremotedroid.app.launch.RdpTunnelStart
 import com.mremotedroid.app.remote.SessionUi
 import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.FolderShared
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -109,6 +111,7 @@ fun ConnectionTreeScreen(
     onAddConnection: (parentId: String?) -> Unit,
     onEditConnection: (nodeId: String) -> Unit,
     onCredentials: () -> Unit,
+    onSnippets: () -> Unit,
     onAbout: () -> Unit,
     incomingIntent: MutableStateFlow<Intent?>
 ) {
@@ -208,6 +211,24 @@ fun ConnectionTreeScreen(
         }
     }
 
+    fun openFiles(node: NodeEntity) {
+        scope.launch {
+            val login = vm.loginFor(node)
+            val open = { EmbeddedRdpLauncher.openFiles(context, node, vm.decrypted(login)) }
+            if (vm.needsUnlock(login) && activity != null) {
+                BiometricGate.authenticate(
+                    activity = activity,
+                    title = context.getString(R.string.unlock_title),
+                    subtitle = node.name,
+                    onSuccess = { vm.markUnlocked(); open() },
+                    onFailure = { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+                )
+            } else {
+                open()
+            }
+        }
+    }
+
     LaunchedEffect(incoming) {
         val intent = incoming ?: return@LaunchedEffect
         incomingIntent.value = null
@@ -290,6 +311,11 @@ fun ConnectionTreeScreen(
                                 text = { Text(stringResource(R.string.credentials_title)) },
                                 leadingIcon = { Icon(Icons.Default.Key, null) },
                                 onClick = { overflowOpen = false; onCredentials() }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.snippets_title)) },
+                                leadingIcon = { Icon(Icons.Default.Terminal, null) },
+                                onClick = { overflowOpen = false; onSnippets() }
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_shared_folder)) },
@@ -389,7 +415,8 @@ fun ConnectionTreeScreen(
                                 onAddShortcut = { addShortcut(node) },
                                 reach = reachable[node.id].takeIf { showReachability },
                                 tunnelName = node.sshTunnelId?.let(names::get),
-                                onWake = { wake(node) }
+                                onWake = { wake(node) },
+                                onFiles = { openFiles(node) }
                             )
                         }
                         item(key = "recent-divider") { HorizontalDivider() }
@@ -412,7 +439,8 @@ fun ConnectionTreeScreen(
                             onAddShortcut = { addShortcut(row.node) },
                             reach = reachable[row.node.id].takeIf { showReachability },
                             tunnelName = row.node.sshTunnelId?.let(names::get),
-                            onWake = { wake(row.node) }
+                            onWake = { wake(row.node) },
+                            onFiles = { openFiles(row.node) }
                         )
                     }
                 }
@@ -566,7 +594,8 @@ private fun TreeRowItem(
     onAddShortcut: () -> Unit,
     reach: Reachability.Status? = null,
     tunnelName: String? = null,
-    onWake: () -> Unit = {}
+    onWake: () -> Unit = {},
+    onFiles: () -> Unit = {}
 ) {
     val isFolder = node.nodeType == NodeEntity.TYPE_FOLDER
     var menuOpen by remember { mutableStateOf(false) }
@@ -677,6 +706,13 @@ private fun TreeRowItem(
                         leadingIcon = { Icon(Icons.Default.AddToHomeScreen, null) },
                         onClick = { menuOpen = false; onAddShortcut() }
                     )
+                    if (node.protocol == Protocol.SSH.name) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_files)) },
+                            leadingIcon = { Icon(Icons.Default.FolderShared, null) },
+                            onClick = { menuOpen = false; onFiles() }
+                        )
+                    }
                     if (node.macAddress.isNotBlank()) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_wake)) },

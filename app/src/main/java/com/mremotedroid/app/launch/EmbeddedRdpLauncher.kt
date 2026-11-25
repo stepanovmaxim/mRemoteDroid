@@ -84,6 +84,14 @@ object EmbeddedRdpLauncher {
         return startRdp(context, node, login, node.hostname, node.port, null)
     }
 
+    /** Opens the SFTP file browser of an SSH connection. */
+    fun openFiles(context: Context, node: NodeEntity, login: Login) {
+        context.startActivity(
+            android.content.Intent(context, com.mremotedroid.app.remote.ssh.SftpActivity::class.java)
+                .putExtra(RemoteSessions.EXTRA_PENDING, RemoteSessions.putPending(node, login))
+        )
+    }
+
     /**
      * Starts FreeRDP for [node] at [host]:[port] (the tunnel's local end when tunnelled);
      * [gatewayHost] replaces the node's RD gateway address when set.

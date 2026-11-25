@@ -10,6 +10,9 @@ import com.mremotedroid.app.data.repo.ConnectionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.mremotedroid.app.remote.ssh.SshKeys
 
 data class EditState(
     val loading: Boolean = true,
@@ -114,6 +117,30 @@ class EditViewModel(
     }
 
     fun update(transform: (EditState) -> EditState) { _state.value = transform(_state.value) }
+
+    /** Creates a key pair; the private key is kept in the form until saved. */
+    fun generateKey(type: SshKeys.Type, onDone: (SshKeys.Generated?) -> Unit) = viewModelScope.launch {
+        val s = _state.value
+        val comment = "${s.username.ifBlank { "user" }}@mremotedroid"
+        val key = withContext(Dispatchers.Default) { runCatching { SshKeys.generate(type, comment) }.getOrNull() }
+        if (key != null) update { it.copy(privateKey = key.privateKey) }
+        onDone(key)
+    }
+
+    /** The public key of the key in the form (new or stored); the password field opens a protected key. */
+    fun publicKey(onResult: (SshKeys.PublicKey) -> Unit) = viewModelScope.launch {
+        val s = _state.value
+        val result = withContext(Dispatchers.Default) {
+            val key = s.privateKey?.ifEmpty { null } ?: existing?.privateKeyBlob?.let { repo.decrypt(it) }?.ifEmpty { null }
+            if (key == null) {
+                SshKeys.PublicKey.Invalid
+            } else {
+                val passphrase = s.password ?: existing?.credentialBlob?.let { repo.decrypt(it) }
+                SshKeys.publicKey(key, passphrase, "${s.username.ifBlank { "user" }}@mremotedroid")
+            }
+        }
+        onResult(result)
+    }
 
     fun save(defaultName: String, onDone: () -> Unit) = viewModelScope.launch {
         val s = _state.value

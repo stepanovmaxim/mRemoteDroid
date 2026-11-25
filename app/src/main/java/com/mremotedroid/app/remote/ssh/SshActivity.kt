@@ -21,6 +21,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -30,6 +32,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.mremotedroid.app.R
 import com.mremotedroid.app.data.db.NodeEntity
+import com.mremotedroid.app.data.settings.SnippetStore
 import com.mremotedroid.app.remote.SessionUi
 import com.mremotedroid.app.remote.RemoteSessions
 import com.termux.terminal.TerminalSession
@@ -51,7 +54,8 @@ class SshActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // black window: light system bar icons
+        enableEdgeToEdge(SystemBarStyle.dark(Color.TRANSPARENT), SystemBarStyle.dark(Color.TRANSPARENT))
 
         val tag = intent.dataString
         val existing = RemoteSessions.find(tag) as? SshSession
@@ -131,6 +135,7 @@ class SshActivity : ComponentActivity() {
     private fun buildKeys(): View = SessionUi.keyRow(this) {
         fun k(label: String, onClick: () -> Unit) = key(label) { onClick(); terminalView.requestFocus() }
         k("⌨") { toggleKeyboard() }
+        k("⚡") { showSnippets() }
         k("ESC") { sendKey(KeyEvent.KEYCODE_ESCAPE) }
         k("TAB") { sendKey(KeyEvent.KEYCODE_TAB) }
         ctrlKey = k("CTRL") { ctrlDown = !ctrlDown; updateModifiers() }
@@ -162,6 +167,50 @@ class SshActivity : ComponentActivity() {
         val labels = Array(12) { "F${it + 1}" }
         AlertDialog.Builder(this)
             .setItems(labels) { _, i -> sendKey(KeyEvent.KEYCODE_F1 + i) }
+            .show()
+    }
+
+    /** Saved commands: pick one to type it, or add a new one. */
+    private fun showSnippets() {
+        val store = SnippetStore.get(this)
+        val snippets = store.snippets.value
+        val labels = snippets.map { it.name } + getString(R.string.snippet_new_item)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.snippets_title)
+            .setItems(labels.toTypedArray()) { _, i ->
+                if (i < snippets.size) {
+                    val bytes = SnippetStore.keystrokes(snippets[i])
+                    session?.terminal?.write(bytes, 0, bytes.size)
+                    terminalView.requestFocus()
+                } else {
+                    addSnippet(store)
+                }
+            }
+            .show()
+    }
+
+    private fun addSnippet(store: SnippetStore) {
+        val name = EditText(this).apply { hint = getString(R.string.field_name); isSingleLine = true }
+        val command = EditText(this).apply {
+            hint = getString(R.string.snippet_command)
+            typeface = Typeface.MONOSPACE
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        }
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), 0)
+            addView(name)
+            addView(command)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.snippet_add)
+            .setView(box)
+            .setPositiveButton(R.string.action_save) { _, _ ->
+                val text = command.text.toString()
+                if (text.isNotBlank()) store.put(name.text.toString().trim(), text, enter = true)
+            }
+            .setNegativeButton(R.string.action_cancel, null)
             .show()
     }
 

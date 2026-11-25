@@ -25,6 +25,7 @@ import com.mremotedroid.app.ui.about.AboutScreen
 import com.mremotedroid.app.ui.credentials.CredentialsScreen
 import com.mremotedroid.app.ui.credentials.CredentialsViewModel
 import com.mremotedroid.app.ui.edit.EditConnectionScreen
+import com.mremotedroid.app.ui.snippets.SnippetsScreen
 import com.mremotedroid.app.ui.edit.EditViewModel
 import com.mremotedroid.app.ui.theme.MRemoteTheme
 import com.mremotedroid.app.ui.tree.ConnectionTreeScreen
@@ -124,6 +125,7 @@ private fun AppNav(
                     nav.navigate("edit?nodeId=$nodeId")
                 },
                 onCredentials = { nav.navigate("credentials") },
+                onSnippets = { nav.navigate("snippets") },
                 onAbout = { nav.navigate("about") },
                 incomingIntent = incomingIntent
             )
@@ -131,6 +133,9 @@ private fun AppNav(
         composable("credentials") {
             val vm: CredentialsViewModel = viewModel(factory = CredentialsViewModel.Factory(repo))
             CredentialsScreen(vm = vm, onBack = { nav.popBackStack() })
+        }
+        composable("snippets") {
+            SnippetsScreen(onBack = { nav.popBackStack() })
         }
         composable("about") {
             AboutScreen(onBack = { nav.popBackStack() })

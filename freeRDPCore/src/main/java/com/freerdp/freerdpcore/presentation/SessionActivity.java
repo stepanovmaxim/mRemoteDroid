@@ -351,8 +351,17 @@ public class SessionActivity extends AppCompatActivity
 		// Always run the session edge-to-edge and fullscreen (immersive). The old
 		// action bar is gone: on Android 15+ edge-to-edge is enforced and it ended
 		// up drawn under the status bar. Session commands live in a floating button.
-		WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+		androidx.activity.EdgeToEdge.enable(this);
+		// Draw into the camera cutout too (the desktop fills the screen; insets keep the
+		// controls clear). ALWAYS replaces SHORT_EDGES, deprecated in Android 15.
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+		{
+			WindowManager.LayoutParams lp = getWindow().getAttributes();
+			lp.layoutInDisplayCutoutMode =
+			    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+			getWindow().setAttributes(lp);
+		}
+		else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
 		{
 			WindowManager.LayoutParams lp = getWindow().getAttributes();
 			lp.layoutInDisplayCutoutMode =

@@ -39,6 +39,13 @@
             </intent-filter>
         </activity>
 
+        <!-- SFTP file browser: config changes are handled in place so transfers survive rotation -->
+        <activity
+            android:name=".remote.ssh.SftpActivity"
+            android:configChanges="orientation|keyboard|keyboardHidden|screenSize|smallestScreenSize|density|screenLayout|navigation|uiMode"
+            android:exported="false"
+            android:theme="@style/Theme.MRemoteDroid"
+            android:windowSoftInputMode="adjustResize" />
         <!-- SSH and VNC windows: like RDP sessions, each in its own task / Recents card -->
         <activity
             android:name=".remote.ssh.SshActivity"

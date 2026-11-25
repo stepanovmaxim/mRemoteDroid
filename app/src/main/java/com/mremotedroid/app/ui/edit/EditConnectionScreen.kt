@@ -44,6 +44,9 @@ import com.mremotedroid.app.data.db.NodeEntity
 import com.mremotedroid.app.data.model.Protocol
 import com.mremotedroid.app.launch.WakeOnLan
 import com.mremotedroid.app.remote.ssh.PortForward
+import com.mremotedroid.app.remote.ssh.SshKeys
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.TextButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -380,6 +383,7 @@ private fun TunnelPicker(s: EditState, onSelect: (String?) -> Unit) {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun PrivateKeyField(s: EditState, vm: EditViewModel) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -398,6 +402,18 @@ private fun PrivateKeyField(s: EditState, vm: EditViewModel) {
         }
     }
     val loaded = s.privateKey?.isNotEmpty() == true || (s.privateKey == null && s.hasStoredKey)
+    var chooseType by remember { mutableStateOf(false) }
+    var generating by remember { mutableStateOf(false) }
+    var shown by remember { mutableStateOf<SshKeys.PublicKey.Ok?>(null) }
+    fun showPublic() = vm.publicKey { result ->
+        when (result) {
+            is SshKeys.PublicKey.Ok -> shown = result
+            SshKeys.PublicKey.NeedsPassphrase ->
+                android.widget.Toast.makeText(context, R.string.key_needs_passphrase, android.widget.Toast.LENGTH_LONG).show()
+            SshKeys.PublicKey.Invalid ->
+                android.widget.Toast.makeText(context, R.string.ssh_bad_key, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.field_private_key), style = MaterialTheme.typography.bodyMedium)
         Text(
@@ -405,9 +421,16 @@ private fun PrivateKeyField(s: EditState, vm: EditViewModel) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             OutlinedButton(onClick = { pick.launch(arrayOf("*/*")) }) { Text(stringResource(R.string.key_choose)) }
+            OutlinedButton(onClick = { chooseType = true }, enabled = !generating) {
+                Text(stringResource(if (generating) R.string.key_generating else R.string.key_generate))
+            }
             if (loaded) {
+                OutlinedButton(onClick = { showPublic() }) { Text(stringResource(R.string.key_public)) }
                 OutlinedButton(onClick = { vm.update { it.copy(privateKey = "") } }) {
                     Text(stringResource(R.string.action_delete))
                 }
@@ -417,6 +440,80 @@ private fun PrivateKeyField(s: EditState, vm: EditViewModel) {
             stringResource(R.string.hint_private_key),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+
+    if (chooseType) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { chooseType = false },
+            title = { Text(stringResource(R.string.key_generate)) },
+            text = {
+                Column {
+                    if (loaded) {
+                        Text(
+                            stringResource(R.string.key_replace_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    SshKeys.Type.entries.forEach { type ->
+                        Text(
+                            type.label,
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                chooseType = false
+                                generating = true
+                                vm.generateKey(type) { key ->
+                                    generating = false
+                                    if (key != null) {
+                                        shown = SshKeys.PublicKey.Ok(key.publicKey, key.fingerprint)
+                                    } else {
+                                        android.widget.Toast.makeText(context, R.string.key_generate_failed, android.widget.Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }.padding(vertical = 12.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { chooseType = false }) { Text(stringResource(R.string.action_cancel)) } }
+        )
+    }
+
+    shown?.let { key ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { shown = null },
+            title = { Text(stringResource(R.string.key_public)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.key_public_hint), style = MaterialTheme.typography.bodySmall)
+                    androidx.compose.foundation.text.selection.SelectionContainer {
+                        Text(
+                            key.line,
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                        )
+                    }
+                    Text(key.fingerprint, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    context.getSystemService(android.content.ClipboardManager::class.java)
+                        .setPrimaryClip(android.content.ClipData.newPlainText("ssh public key", key.line))
+                    android.widget.Toast.makeText(context, R.string.ssh_copied, android.widget.Toast.LENGTH_SHORT).show()
+                }) { Text(stringResource(R.string.key_copy)) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        val send = android.content.Intent(android.content.Intent.ACTION_SEND)
+                            .setType("text/plain")
+                            .putExtra(android.content.Intent.EXTRA_TEXT, key.line)
+                        context.startActivity(android.content.Intent.createChooser(send, null))
+                    }) { Text(stringResource(R.string.key_share)) }
+                    TextButton(onClick = { shown = null }) { Text(stringResource(R.string.action_close)) }
+                }
+            }
         )
     }
 }
