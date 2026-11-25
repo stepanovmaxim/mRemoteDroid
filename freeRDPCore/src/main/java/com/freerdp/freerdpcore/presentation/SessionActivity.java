@@ -746,14 +746,12 @@ public class SessionActivity extends AppCompatActivity
 		GradientDrawable bg = new GradientDrawable();
 		bg.setColor(0xE6202124);
 		bg.setCornerRadius(dp(14));
-		list.setBackground(bg);
-		list.setPadding(dp(6), dp(6), dp(6), dp(6));
 
 		// Not focusable: the session window keeps input focus, so the soft keyboard
 		// stays bound (and open) while the menu is used. Outside taps still dismiss it;
 		// Back is handled by the activity's back callback.
-		final PopupWindow popup = new PopupWindow(list, ViewGroup.LayoutParams.WRAP_CONTENT,
-		                                          ViewGroup.LayoutParams.WRAP_CONTENT, false);
+		final PopupWindow popup = new PopupWindow(this);
+		popup.setFocusable(false);
 		popup.setOutsideTouchable(true);
 		sessionMenuPopup = popup;
 		popup.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
@@ -779,19 +777,87 @@ public class SessionActivity extends AppCompatActivity
 		addSessionMenuRow(list, popup, R.drawable.icon_menu_disconnect,
 		                  getString(R.string.menu_disconnect), R.id.session_disconnect);
 
-		// place it beside the button, flipping to whichever side has room
-		list.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+		// Too tall for the screen (a phone in landscape): two columns, and if even that
+		// does not fit, scroll.
 		View root = findViewById(R.id.session_root_view);
+		int maxHeight = root.getHeight() - dp(16);
+		int maxWidth = root.getWidth() - dp(16);
+		list.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+		View content = list;
+		if (list.getMeasuredHeight() > maxHeight)
+		{
+			LinearLayout columns = twoColumns(list);
+			columns.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+			if (columns.getMeasuredWidth() <= maxWidth)
+				content = columns;
+			else
+				content = unwrapColumns(columns);
+		}
+		android.widget.ScrollView scroll = new android.widget.ScrollView(this);
+		scroll.setBackground(bg);
+		scroll.setPadding(dp(6), dp(6), dp(6), dp(6));
+		scroll.setClipToPadding(false);
+		scroll.setVerticalScrollBarEnabled(true);
+		scroll.addView(content);
+		scroll.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+		int pw = scroll.getMeasuredWidth();
+		int ph = Math.min(scroll.getMeasuredHeight(), maxHeight);
+		popup.setContentView(scroll);
+		popup.setWidth(pw);
+		popup.setHeight(ph);
+
+		// place it beside the button, flipping to whichever side has room
 		int[] loc = new int[2];
 		anchor.getLocationInWindow(loc);
-		int pw = list.getMeasuredWidth();
-		int ph = list.getMeasuredHeight();
 		int x = loc[0] - pw - dp(8);
 		if (x < dp(8))
 			x = loc[0] + anchor.getWidth() + dp(8);
 		int y = loc[1] + anchor.getHeight() / 2 - ph / 2;
 		y = Math.max(dp(8), Math.min(y, root.getHeight() - ph - dp(8)));
 		popup.showAtLocation(root, Gravity.NO_GRAVITY, x, y);
+	}
+
+	/** Moves the rows of [list] into two side-by-side columns (first half left). */
+	private LinearLayout twoColumns(LinearLayout list)
+	{
+		LinearLayout columns = new LinearLayout(this);
+		columns.setOrientation(LinearLayout.HORIZONTAL);
+		LinearLayout left = new LinearLayout(this);
+		left.setOrientation(LinearLayout.VERTICAL);
+		LinearLayout right = new LinearLayout(this);
+		right.setOrientation(LinearLayout.VERTICAL);
+		int count = list.getChildCount();
+		int half = (count + 1) / 2;
+		java.util.List<View> rows = new java.util.ArrayList<>();
+		for (int i = 0; i < count; i++)
+			rows.add(list.getChildAt(i));
+		list.removeAllViews();
+		for (int i = 0; i < rows.size(); i++)
+			(i < half ? left : right)
+			    .addView(rows.get(i), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+			                                                        ViewGroup.LayoutParams.WRAP_CONTENT));
+		columns.addView(left);
+		columns.addView(right);
+		return columns;
+	}
+
+	/** Back to one column (for a screen too narrow for two). */
+	private View unwrapColumns(LinearLayout columns)
+	{
+		LinearLayout list = new LinearLayout(this);
+		list.setOrientation(LinearLayout.VERTICAL);
+		java.util.List<View> rows = new java.util.ArrayList<>();
+		for (int c = 0; c < columns.getChildCount(); c++)
+		{
+			LinearLayout column = (LinearLayout)columns.getChildAt(c);
+			for (int i = 0; i < column.getChildCount(); i++)
+				rows.add(column.getChildAt(i));
+			column.removeAllViews();
+		}
+		for (View row : rows)
+			list.addView(row, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+			                                                ViewGroup.LayoutParams.WRAP_CONTENT));
+		return list;
 	}
 
 	private void addSessionMenuRow(LinearLayout list, PopupWindow popup, int iconRes,
